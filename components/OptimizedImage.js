@@ -1,444 +1,81 @@
-import { siteConfig } from '@/lib/config'
-import { generateImageAlt } from '@/lib/seo/imageSEO'
-import { isNotionImageUrl, convertToProxyUrl, isNotionImageExpiring } from '@/lib/utils/imageProxy'
-import { useClientOnly, useStorage } from '@/lib/hooks/useClientOnly'
-import Head from 'next/head'
-import { useEffect, useRef, useState, useCallback } from 'react'
-
 /**
- * 增强版图片懒加载组件
- * 支持WebP/AVIF格式、更好的占位符、性能优化等
+ * 优化的图片组件
+ * 解决图片传送和LCP问题
  */
-export default function OptimizedImage({
-  priority = false,
-  id,
-  src,
-  alt,
-  placeholderSrc,
+
+import Image from 'next/image'
+import { useState } from 'react'
+
+const OptimizedImage = ({ 
+  src, 
+  alt, 
+  width, 
+  height, 
+  priority = false, 
   className = '',
-  width,
-  height,
-  title,
-  onLoad,
-  onClick,
-  style,
-  quality = 75,
-  sizes,
-  blurDataURL,
   placeholder = 'blur',
-  loading = 'lazy',
-  decoding = 'async',
-  fetchPriority,
-  ...props
-}) {
-  const maxWidth = siteConfig('IMAGE_COMPRESS_WIDTH', 1200)
-  const defaultPlaceholderSrc = siteConfig('IMG_LAZY_LOAD_PLACEHOLDER')
-  const imageRef = useRef(null)
-  const [currentSrc, setCurrentSrc] = useState(null)
-  const [isLoaded, setIsLoaded] = useState(false)
-  const [isError, setIsError] = useState(false)
-  const [supportedFormats, setSupportedFormats] = useState({
-    avif: false,
-    webp: false
-  })
-  
-  const isClient = useClientOnly()
-  const { getItem, setItem } = useStorage('sessionStorage')
+  ...props 
+}) => {
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(false)
 
-  // 判断是否应该预加载这张图片
-  const shouldPreloadThisImage = useCallback((imageSrc, isPriority) => {
-    if (!imageSrc || !isPriority) return false
-    
-    // 只预加载真正关键的图片
-    const criticalKeywords = ['logo', 'avatar', 'hero', 'banner', 'cover']
-    const isCritical = criticalKeywords.some(keyword => 
-      imageSrc.toLowerCase().includes(keyword)
-    )
-    
-    // 避免预加载过多图片
-    if (!isCritical) return false
-    
-    // 检查图片尺寸，避免预加载大图
-    try {
-      const url = new URL(imageSrc, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
-      const params = new URLSearchParams(url.search)
-      const width = params.get('w') || params.get('width')
-      
-      // 如果图片宽度超过800px，不预加载
-      if (width && parseInt(width) > 800) {
-        return false
-      }
-    } catch (error) {
-      // URL解析失败，使用保守策略
-      return isCritical
-    }
-    
-    return true
-  }, [])
+  // 生成模糊占位符
+  const blurDataURL = `data:image/svg+xml;base64,${Buffer.from(
+    `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100%" height="100%" fill="#f3f4f6"/>
+      <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#9ca3af" font-size="14">
+        Loading...
+      </text>
+    </svg>`
+  ).toString('base64')}`
 
-  // 检测浏览器支持的图片格式（优化版，避免水合错误）
-  useEffect(() => {
-    if (!isClient) return // 只在客户端运行
-    
-    const checkFormatSupport = async () => {
-      const formats = { avif: false, webp: false }
-      
-      // 尝试从缓存获取结果
-      const cached = getItem('imageFormats')
-      if (cached) {
-        setSupportedFormats(cached)
-        return
-      }
-      
-      // 使用更可靠的格式检测方法
-      const checkFormat = (format) => {
-        return new Promise((resolve) => {
-          const img = new Image()
-          img.onload = () => resolve(true)
-          img.onerror = () => resolve(false)
-          
-          // 使用1x1像素的测试图片
-          const testImages = {
-            webp: 'data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACyAgCdASoCAAIALmk0mk0iIiIiIgBoSygABc6WWgAA/veff/0PP8bA//LwYAAA',
-            avif: 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQ0MAAAAABNjb2xybmNseAACAAIAAYAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKCBgABogQEAwgMg8f8D///8WfhwB8+ErK42A='
-          }
-          
-          img.src = testImages[format]
-        })
-      }
-      
-      // 并行检测格式支持
-      const [webpSupported, avifSupported] = await Promise.all([
-        checkFormat('webp'),
-        checkFormat('avif')
-      ])
-      
-      formats.webp = webpSupported
-      formats.avif = avifSupported
-      
-      setSupportedFormats(formats)
-      
-      // 缓存检测结果
-      setItem('imageFormats', formats)
-    }
-
-    checkFormatSupport()
-  }, [isClient]) // 移除getItem和setItem依赖，避免无限循环
-
-  // 生成优化后的图片URL
-  const getOptimizedImageUrl = useCallback((originalSrc, targetWidth, format = null) => {
-    if (!originalSrc) return null
-
-    // 检查是否为Notion图片URL
-    if (isNotionImageUrl(originalSrc)) {
-      // 如果是Notion图片且即将过期，使用代理
-      if (isNotionImageExpiring(originalSrc, 48)) { // 48小时内过期就使用代理
-        return convertToProxyUrl(originalSrc)
-      }
-      // 如果还没过期，直接使用原URL
-      return originalSrc
-    }
-
-    // 如果是外部URL，尝试添加格式参数
-    if (originalSrc.startsWith('http')) {
-      let optimizedUrl = originalSrc
-      
-      // 调整尺寸
-      const screenWidth = (typeof window !== 'undefined' && window?.screen?.width) || maxWidth
-      const finalWidth = Math.min(targetWidth || screenWidth, maxWidth)
-      
-      // 正则表达式，用于匹配 URL 中的 width/w 参数
-      const widthRegex = /width=\d+/
-      const wRegex = /w=\d+/
-      
-      optimizedUrl = optimizedUrl
-        .replace(widthRegex, `width=${finalWidth}`)
-        .replace(wRegex, `w=${finalWidth}`)
-      
-      // 如果URL中没有width参数，尝试添加
-      if (!widthRegex.test(optimizedUrl) && !wRegex.test(optimizedUrl)) {
-        const separator = optimizedUrl.includes('?') ? '&' : '?'
-        optimizedUrl += `${separator}w=${finalWidth}`
-      }
-      
-      // 添加质量参数
-      if (quality && quality !== 75) {
-        const separator = optimizedUrl.includes('?') ? '&' : '?'
-        optimizedUrl += `${separator}q=${quality}`
-      }
-      
-      // 添加格式参数
-      if (format && (format === 'webp' || format === 'avif')) {
-        const separator = optimizedUrl.includes('?') ? '&' : '?'
-        optimizedUrl += `${separator}fm=${format}`
-      }
-      
-      return optimizedUrl
-    }
-    
-    return originalSrc
-  }, [maxWidth, quality])
-
-  // 获取最佳图片源
-  const getBestImageSrc = useCallback(() => {
-    if (!src) return null
-
-    // 在服务端渲染时，使用原格式避免水合错误
-    if (!isClient) {
-      return getOptimizedImageUrl(src, width)
-    }
-
-    // 客户端优先使用AVIF，其次WebP，最后原格式
-    if (supportedFormats.avif) {
-      return getOptimizedImageUrl(src, width, 'avif')
-    } else if (supportedFormats.webp) {
-      return getOptimizedImageUrl(src, width, 'webp')
-    } else {
-      return getOptimizedImageUrl(src, width)
-    }
-  }, [src, width, supportedFormats, getOptimizedImageUrl, isClient])
-
-  // 生成占位符
-  const getPlaceholderSrc = useCallback(() => {
-    if (placeholderSrc) return placeholderSrc
-    if (blurDataURL) return blurDataURL
-    if (defaultPlaceholderSrc) return defaultPlaceholderSrc
-    
-    // 生成低质量占位符
-    if (src) {
-      return getOptimizedImageUrl(src, 40, 'webp') // 40px宽度的模糊占位符
-    }
-    
-    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkxvYWRpbmcuLi48L3RleHQ+PC9zdmc+'
-  }, [placeholderSrc, blurDataURL, defaultPlaceholderSrc, src, getOptimizedImageUrl])
-
-  // 图片加载成功回调
-  const handleImageLoaded = useCallback(() => {
-    setIsLoaded(true)
-    setIsError(false)
-    
-    if (typeof onLoad === 'function') {
-      onLoad()
-    }
-    
-    // 移除占位符类名
-    if (imageRef.current) {
-      imageRef.current.classList.remove('lazy-image-placeholder')
-      imageRef.current.classList.add('lazy-image-loaded')
-    }
-  }, [onLoad])
-
-  // 图片加载失败回调
-  const handleImageError = useCallback(() => {
-    console.warn('Image loading failed:', imageRef.current?.src)
-    
-    // 如果是Notion图片加载失败，尝试使用代理
-    if (imageRef.current && isNotionImageUrl(src)) {
-      const currentSrc = imageRef.current.src
-      const proxySrc = convertToProxyUrl(src)
-      
-      // 如果当前不是代理URL，尝试使用代理
-      if (!currentSrc.includes('/api/image-proxy') && proxySrc !== currentSrc) {
-        console.log('Retrying with proxy URL:', proxySrc)
-        imageRef.current.src = proxySrc
-        return // 不设置错误状态，给代理一次机会
-      }
-    }
-    
-    setIsError(true)
-    
-    if (imageRef.current) {
-      // 尝试加载备用图片
-      const fallbackSrc = getPlaceholderSrc()
-      if (imageRef.current.src !== fallbackSrc) {
-        imageRef.current.src = fallbackSrc
-      }
-      
-      imageRef.current.classList.remove('lazy-image-placeholder')
-      imageRef.current.classList.add('lazy-image-error')
-    }
-  }, [src, getPlaceholderSrc])
-
-  // 懒加载逻辑
-  useEffect(() => {
-    if (!src || priority) {
-      // 如果是优先加载或没有src，直接设置图片
-      const bestSrc = getBestImageSrc()
-      setCurrentSrc(bestSrc)
-      return
-    }
-
-    // 设置初始占位符
-    setCurrentSrc(getPlaceholderSrc())
-
-    const observer = new IntersectionObserver(
-      entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const bestSrc = getBestImageSrc()
-            
-            // 预加载图片
-            const img = new Image()
-            img.src = bestSrc
-            img.onload = () => {
-              setCurrentSrc(bestSrc)
-              handleImageLoaded()
-            }
-            img.onerror = handleImageError
-
-            observer.unobserve(entry.target)
-          }
-        })
-      },
-      { 
-        rootMargin: '50px 0px', // 提前50px开始加载
-        threshold: 0.1 // 10%可见时开始加载
-      }
-    )
-
-    if (imageRef.current) {
-      observer.observe(imageRef.current)
-    }
-
-    return () => {
-      if (imageRef.current) {
-        observer.unobserve(imageRef.current)
-      }
-    }
-  }, [src, priority, getBestImageSrc, getPlaceholderSrc, handleImageLoaded, handleImageError])
-
-  // 自动生成alt属性（如果没有提供）
-  const [generatedAlt, setGeneratedAlt] = useState('')
-  
-  useEffect(() => {
-    if (!isClient || alt || !src || !siteConfig('SEO_AUTO_GENERATE_ALT', true)) {
-      return
-    }
-    
-    generateImageAlt(src, {
-      title: document.title || '',
-      url: window.location.href || ''
-    }).then(setGeneratedAlt).catch(() => setGeneratedAlt(''))
-  }, [alt, src, isClient])
-
-  // 构建图片属性
-  const finalAlt = alt || generatedAlt || ''
-  const imgProps = {
-    ref: imageRef,
-    src: currentSrc || getPlaceholderSrc(),
-    'data-src': src, // 存储原始图片地址
-    alt: finalAlt,
-    className: `${className} ${!isLoaded ? 'lazy-image-placeholder' : 'lazy-image-loaded'} ${isError ? 'lazy-image-error' : ''}`.trim(),
-    style: {
-      transition: 'opacity 0.3s ease-in-out, filter 0.3s ease-in-out',
-      filter: !isLoaded && !isError ? 'blur(5px)' : 'none',
-      opacity: !isLoaded && !isError ? 0.7 : 1,
-      ...style
-    },
-    loading: priority ? 'eager' : loading,
-    decoding,
-    onLoad: handleImageLoaded,
-    onError: handleImageError,
-    onClick,
-    ...props
+  const handleLoad = () => {
+    setIsLoading(false)
   }
 
-  // 添加可选属性
-  if (id) imgProps.id = id
-  if (title) imgProps.title = title
-  if (width) imgProps.width = width
-  if (height) imgProps.height = height
-  if (sizes) imgProps.sizes = sizes
-  if (fetchPriority) imgProps.fetchPriority = fetchPriority
+  const handleError = () => {
+    setError(true)
+    setIsLoading(false)
+  }
 
-  if (!src) {
-    return null
+  if (error) {
+    return (
+      <div 
+        className={`bg-gray-200 flex items-center justify-center ${className}`}
+        style={{ width, height }}
+      >
+        <span className="text-gray-500 text-sm">图片加载失败</span>
+      </div>
+    )
   }
 
   return (
-    <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img {...imgProps} />
-      
-      {/* 预加载关键图片 - 只预加载首屏关键图片，避免预加载警告 */}
-      {priority && isClient && shouldPreloadThisImage(src, priority) && (
-        <Head>
-          <link 
-            rel="preload" 
-            as="image" 
-            href={getBestImageSrc()} 
-            imageSizes={sizes}
-            // 移除srcSet以减少预加载资源数量
-            // imageSrcSet={generateSrcSet(src, supportedFormats)}
-            // 添加媒体查询，只在合适的屏幕尺寸下预加载
-            media={width && height ? `(max-width: ${Math.max(width * 2, 1200)}px)` : undefined}
-          />
-        </Head>
+    <div className={`relative ${className}`}>
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        priority={priority}
+        placeholder={placeholder}
+        blurDataURL={blurDataURL}
+        quality={75}
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        onLoad={handleLoad}
+        onError={handleError}
+        className={`transition-opacity duration-300 ${
+          isLoading ? 'opacity-0' : 'opacity-100'
+        }`}
+        {...props}
+      />
+      {isLoading && (
+        <div 
+          className="absolute inset-0 bg-gray-200 animate-pulse"
+          style={{ width, height }}
+        />
       )}
-      
-      {/* 添加样式 */}
-      <style jsx>{`
-        .lazy-image-placeholder {
-          background-color: #f3f4f6;
-          background-image: linear-gradient(45deg, #f9fafb 25%, transparent 25%), 
-                            linear-gradient(-45deg, #f9fafb 25%, transparent 25%), 
-                            linear-gradient(45deg, transparent 75%, #f9fafb 75%), 
-                            linear-gradient(-45deg, transparent 75%, #f9fafb 75%);
-          background-size: 20px 20px;
-          background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-          animation: loading 1.5s ease-in-out infinite;
-        }
-        
-        .lazy-image-loaded {
-          background: none;
-          animation: none;
-        }
-        
-        .lazy-image-error {
-          background-color: #fee2e2;
-          background-image: none;
-          animation: none;
-        }
-        
-        @keyframes loading {
-          0% { background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
-          100% { background-position: 20px 20px, 20px 30px, 30px 10px, 10px 20px; }
-        }
-      `}</style>
-    </>
+    </div>
   )
 }
 
-/**
- * 生成响应式图片srcset
- */
-function generateSrcSet(src, supportedFormats) {
-  if (!src) return ''
-  
-  const widths = [320, 640, 768, 1024, 1280, 1920]
-  const format = supportedFormats.avif ? 'avif' : supportedFormats.webp ? 'webp' : null
-  
-  return widths.map(width => {
-    let url = src
-    
-    // 调整URL参数
-    const widthRegex = /width=\d+/
-    const wRegex = /w=\d+/
-    
-    url = url.replace(widthRegex, `width=${width}`).replace(wRegex, `w=${width}`)
-    
-    // 如果URL中没有width参数，尝试添加
-    if (!widthRegex.test(url) && !wRegex.test(url)) {
-      const separator = url.includes('?') ? '&' : '?'
-      url += `${separator}w=${width}`
-    }
-    
-    // 添加格式参数
-    if (format) {
-      const separator = url.includes('?') ? '&' : '?'
-      url += `${separator}fm=${format}`
-    }
-    
-    return `${url} ${width}w`
-  }).join(', ')
-}
+export default OptimizedImage
