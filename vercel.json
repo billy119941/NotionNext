@@ -89,10 +89,6 @@
   ],
   "rewrites": [
     {
-      "source": "/robots.txt",
-      "destination": "/robots.txt"
-    },
-    {
       "source": "/:path*.html",
       "destination": "/:path*"
     }
