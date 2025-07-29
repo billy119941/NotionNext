@@ -4,7 +4,7 @@
  * This generates robots.txt dynamically to avoid Cloudflare override issues
  * 
  * @author NotionNext Team
- * @version 1.0.1
+ * @version 1.1.0 (Corrected Version)
  * @since 2024-01-29
  */
 
@@ -12,21 +12,23 @@ import BLOG from '@/blog.config'
 
 export const getServerSideProps = async ctx => {
   const baseUrl = BLOG.LINK || 'https://www.shareking.vip'
-  const author = 'ShareKing' // 使用英文避免编码问题
+  const author = 'ShareKing'
   const currentDate = new Date().toISOString().split('T')[0]
   
   // Extract domain without protocol for Host declaration
   const domain = baseUrl.replace('https://', '').replace('http://', '')
   
   let content = `# Robots.txt for ${baseUrl}
-# Generated on ${currentDate}
+# Generated on ${currentDate} (Corrected Version)
 # Author: ${author}
 
-# Allow all web crawlers to access all content
+#----------------------------------------------------------------
+# 1. General rules for all compliant crawlers, including major search engines.
+#    Major search engines like Googlebot and Bingbot will follow these rules.
+#----------------------------------------------------------------
 User-agent: *
-Allow: /
 
-# Disallow access to admin and private areas
+# Disallow access to admin, private, and non-content areas
 Disallow: /admin/
 Disallow: /api/
 Disallow: /dashboard/
@@ -35,39 +37,15 @@ Disallow: /static/
 
 # Disallow access to search result pages to prevent duplicate content
 Disallow: /search?*
-Disallow: /search/*
+Disallow: /search/
 
-# Allow access to important directories
-Allow: /images/
-Allow: /css/
-Allow: /js/
-Allow: /fonts/
+# Note: There is no need to explicitly "Allow" subdirectories like /images/ or /css/
+# unless their parent directory is disallowed. Assuming they are not inside /static/.
 
-# Specific rules for major search engines
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-Crawl-delay: 1
-
-User-agent: Slurp
-Allow: /
-Crawl-delay: 2
-
-User-agent: DuckDuckBot
-Allow: /
-Crawl-delay: 1
-
-User-agent: Baiduspider
-Allow: /
-Crawl-delay: 2
-
-User-agent: YandexBot
-Allow: /
-Crawl-delay: 1
-
-# Block problematic and AI training bots
+#----------------------------------------------------------------
+# 2. Block problematic and specific AI training bots by name.
+#    These bots will be blocked completely.
+#----------------------------------------------------------------
 User-agent: AhrefsBot
 Disallow: /
 
@@ -114,17 +92,13 @@ Disallow: /
 User-agent: meta-externalagent
 Disallow: /
 
-# Host declaration (domain only, no protocol)
-Host: ${domain}
+#----------------------------------------------------------------
+# 3. Sitemap location.
+#    This directive is supported by most search engines.
+#----------------------------------------------------------------
+Sitemap: ${baseUrl}/sitemap.xml
 
-# Sitemap locations
-Sitemap: ${baseUrl}/sitemap.xml`
-
-  // 只添加实际存在的 sitemap 文件
-  // 目前只有主 sitemap.xml 文件存在，其他增强版 sitemap 暂未实现
-
-  content += `
-
+#----------------------------------------------------------------
 # Additional information
 # For questions about this robots.txt, contact: longxiao0807@gmail.com
 `
@@ -145,11 +119,17 @@ Sitemap: ${baseUrl}/sitemap.xml`
     
     // Fallback content
     const fallbackContent = `User-agent: *
-Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /dashboard/
+Disallow: /_next/
+Disallow: /static/
+Disallow: /search?*
+Disallow: /search/
 
 Sitemap: ${baseUrl}/sitemap.xml
 
-Host: ${domain}
+# For questions about this robots.txt, contact: longxiao0807@gmail.com
 `
     
     ctx.res.setHeader('Content-Type', 'text/plain; charset=utf-8')
