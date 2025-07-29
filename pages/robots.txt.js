@@ -121,16 +121,8 @@ Host: ${domain}
 # Sitemap locations
 Sitemap: ${baseUrl}/sitemap.xml`
 
-  // Add enhanced sitemap files if enabled
-  if (BLOG.SEO_SITEMAP_ENHANCED) {
-    content += `
-Sitemap: ${baseUrl}/sitemap-images.xml
-Sitemap: ${baseUrl}/sitemap-pages.xml
-Sitemap: ${baseUrl}/sitemap-posts.xml
-Sitemap: ${baseUrl}/sitemap-categories.xml
-Sitemap: ${baseUrl}/sitemap-tags.xml
-Sitemap: ${baseUrl}/sitemap-index.xml`
-  }
+  // 只添加实际存在的 sitemap 文件
+  // 目前只有主 sitemap.xml 文件存在，其他增强版 sitemap 暂未实现
 
   content += `
 
