@@ -28,7 +28,7 @@ export const getServerSideProps = async ctx => {
 
     try {
       console.log(`[Sitemap] Processing site ${index + 1}/${siteIds.length}: ${id}`)
-      
+
       // 第一个id站点默认语言
       const siteData = await getGlobalData({
         pageId: id,
@@ -43,23 +43,23 @@ export const getServerSideProps = async ctx => {
 
       const localeFields = generateLocalesSitemap(link, siteData.allPages, locale)
       fields = fields.concat(localeFields)
-      
+
       console.log(`[Sitemap] Site ${id} processed: ${localeFields.length} URLs`)
-      
+
     } catch (error) {
       console.warn(`[Sitemap] Failed to process site ${id}:`, error.message)
-      
+
       // 降级处理：使用基础配置生成基本sitemap
       const fallbackLink = 'https://www.shareking.vip'
       const fallbackFields = generateLocalesSitemap(fallbackLink, [], locale)
       fields = fields.concat(fallbackFields)
-      
+
       console.log(`[Sitemap] Using fallback for site ${id}: ${fallbackFields.length} URLs`)
     }
   }
 
   fields = getUniqueFields(fields)
-  
+
   console.log(`[Sitemap] Final sitemap: ${fields.length} unique URLs`)
 
   // 缓存
@@ -155,4 +155,4 @@ function getUniqueFields(fields) {
 
 
 
-export default () => {}
+export default () => { }
