@@ -90,17 +90,30 @@ const nextConfig = {
       ? 'standalone'
       : undefined,
   staticPageGenerationTimeout: 120,
+
+  // 性能优化配置
+  swcMinify: true, // 使用 SWC 进行代码压缩
+  compress: true, // 启用 gzip 压缩
+  poweredByHeader: false, // 移除 X-Powered-By 头
+
   // 多语言， 在export时禁用
   i18n: process.env.EXPORT
     ? undefined
     : {
-        defaultLocale: BLOG.LANG,
-        // 支持的所有多语言,按需填写即可
-        locales: locales
-      },
+      defaultLocale: BLOG.LANG,
+      // 支持的所有多语言,按需填写即可
+      locales: locales
+    },
+
+  // 图片优化配置
   images: {
-    // 图片压缩
+    // 图片压缩格式优先级
     formats: ['image/avif', 'image/webp'],
+    // 图片尺寸优化
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // 启用图片优化
+    minimumCacheTTL: 31536000, // 1年缓存
     // 允许next/image加载的图片 域名
     domains: [
       'gravatar.com',
@@ -118,119 +131,119 @@ const nextConfig = {
   redirects: process.env.EXPORT
     ? undefined
     : () => {
-        return [
-          {
-            source: '/feed',
-            destination: '/rss/feed.xml',
-            permanent: true
-          }
-        ]
-      },
+      return [
+        {
+          source: '/feed',
+          destination: '/rss/feed.xml',
+          permanent: true
+        }
+      ]
+    },
   // 重写url
   rewrites: process.env.EXPORT
     ? undefined
     : () => {
-        // 处理多语言重定向
-        const langsRewrites = []
-        if (BLOG.NOTION_PAGE_ID.indexOf(',') > 0) {
-          const siteIds = BLOG.NOTION_PAGE_ID.split(',')
-          const langs = []
-          for (let index = 0; index < siteIds.length; index++) {
-            const siteId = siteIds[index]
-            const prefix = extractLangPrefix(siteId)
-            // 如果包含前缀 例如 zh , en 等
-            if (prefix) {
-              langs.push(prefix)
-            }
-            console.log('[Locales]', siteId)
+      // 处理多语言重定向
+      const langsRewrites = []
+      if (BLOG.NOTION_PAGE_ID.indexOf(',') > 0) {
+        const siteIds = BLOG.NOTION_PAGE_ID.split(',')
+        const langs = []
+        for (let index = 0; index < siteIds.length; index++) {
+          const siteId = siteIds[index]
+          const prefix = extractLangPrefix(siteId)
+          // 如果包含前缀 例如 zh , en 等
+          if (prefix) {
+            langs.push(prefix)
           }
-
-          // 映射多语言
-          // 示例： source: '/:locale(zh|en)/:path*' ; :locale() 会将语言放入重写后的 `?locale=` 中。
-          langsRewrites.push(
-            {
-              source: `/:locale(${langs.join('|')})/:path*`,
-              destination: '/:path*'
-            },
-            // 匹配没有路径的情况，例如 [domain]/zh 或 [domain]/en
-            {
-              source: `/:locale(${langs.join('|')})`,
-              destination: '/'
-            },
-            // 匹配没有路径的情况，例如 [domain]/zh/ 或 [domain]/en/
-            {
-              source: `/:locale(${langs.join('|')})/`,
-              destination: '/'
-            }
-          )
+          console.log('[Locales]', siteId)
         }
 
-        return [
-          ...langsRewrites,
-          // 伪静态重写
+        // 映射多语言
+        // 示例： source: '/:locale(zh|en)/:path*' ; :locale() 会将语言放入重写后的 `?locale=` 中。
+        langsRewrites.push(
           {
-            source: '/:path*.html',
+            source: `/:locale(${langs.join('|')})/:path*`,
             destination: '/:path*'
+          },
+          // 匹配没有路径的情况，例如 [domain]/zh 或 [domain]/en
+          {
+            source: `/:locale(${langs.join('|')})`,
+            destination: '/'
+          },
+          // 匹配没有路径的情况，例如 [domain]/zh/ 或 [domain]/en/
+          {
+            source: `/:locale(${langs.join('|')})/`,
+            destination: '/'
           }
-        ]
-      },
+        )
+      }
+
+      return [
+        ...langsRewrites,
+        // 伪静态重写
+        {
+          source: '/:path*.html',
+          destination: '/:path*'
+        }
+      ]
+    },
   headers: process.env.EXPORT
     ? undefined
     : () => {
-        return [
-          {
-            source: '/:path*{/}?',
-            headers: [
-              { key: 'Access-Control-Allow-Credentials', value: 'true' },
-              { key: 'Access-Control-Allow-Origin', value: '*' },
-              {
-                key: 'Access-Control-Allow-Methods',
-                value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT'
-              },
-              {
-                key: 'Access-Control-Allow-Headers',
-                value:
-                  'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
-              },
-              {
-                key: 'X-Content-Type-Options',
-                value: 'nosniff'
-              },
-              {
-                key: 'X-Frame-Options',
-                value: 'DENY'
-              },
-              {
-                key: 'X-XSS-Protection',
-                value: '1; mode=block'
-              },
-              {
-                key: 'Referrer-Policy',
-                value: 'strict-origin-when-cross-origin'
-              },
-              {
-                key: 'Cache-Control',
-                value: 'public, max-age=31536000, immutable'
-              },
-              {
-                key: 'Content-Security-Policy',
-                value: [
-                  "default-src 'self' *",
-                  "script-src 'self' 'unsafe-inline' 'unsafe-eval' *",
-                  "style-src 'self' 'unsafe-inline' *",
-                  "font-src 'self' * data:",
-                  "img-src 'self' data: blob: *",
-                  "connect-src 'self' *",
-                  "frame-src 'self' *",
-                  "object-src 'none'",
-                  "base-uri 'self'",
-                  "form-action 'self' *"
-                ].join('; ')
-              }
-            ]
-          }
-        ]
-      },
+      return [
+        {
+          source: '/:path*{/}?',
+          headers: [
+            { key: 'Access-Control-Allow-Credentials', value: 'true' },
+            { key: 'Access-Control-Allow-Origin', value: '*' },
+            {
+              key: 'Access-Control-Allow-Methods',
+              value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT'
+            },
+            {
+              key: 'Access-Control-Allow-Headers',
+              value:
+                'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+            },
+            {
+              key: 'X-Content-Type-Options',
+              value: 'nosniff'
+            },
+            {
+              key: 'X-Frame-Options',
+              value: 'DENY'
+            },
+            {
+              key: 'X-XSS-Protection',
+              value: '1; mode=block'
+            },
+            {
+              key: 'Referrer-Policy',
+              value: 'strict-origin-when-cross-origin'
+            },
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=31536000, immutable'
+            },
+            {
+              key: 'Content-Security-Policy',
+              value: [
+                "default-src 'self' *",
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' *",
+                "style-src 'self' 'unsafe-inline' *",
+                "font-src 'self' * data:",
+                "img-src 'self' data: blob: *",
+                "connect-src 'self' *",
+                "frame-src 'self' *",
+                "object-src 'none'",
+                "base-uri 'self'",
+                "form-action 'self' *"
+              ].join('; ')
+            }
+          ]
+        }
+      ]
+    },
   webpack: (config, { dev, isServer }) => {
     // 动态主题：添加 resolve.alias 配置，将动态路径映射到实际路径
     config.resolve.alias['@'] = path.resolve(__dirname)
@@ -243,10 +256,89 @@ const nextConfig = {
       'themes',
       THEME
     )
-    // Enable source maps in development mode
-    if (process.env.NODE_ENV_API === 'development') {
-      config.devtool = 'source-map'
+
+    // 性能优化配置
+    if (!dev && !isServer) {
+      // 更激进的代码分割优化
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        minSize: 20000,
+        maxSize: 244000,
+        cacheGroups: {
+          // React 相关库单独分包
+          react: {
+            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+            name: 'react',
+            chunks: 'all',
+            priority: 20
+          },
+          // Notion 相关库单独分包
+          notion: {
+            test: /[\\/]node_modules[\\/](notion-client|notion-utils|react-notion-x)[\\/]/,
+            name: 'notion',
+            chunks: 'all',
+            priority: 15
+          },
+          // 其他第三方库
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+            priority: 10,
+            maxSize: 200000
+          },
+          // 公共代码
+          common: {
+            name: 'common',
+            minChunks: 2,
+            chunks: 'all',
+            priority: 5,
+            reuseExistingChunk: true,
+            maxSize: 100000
+          }
+        }
+      }
+
+      // 压缩和 Tree shaking 优化
+      config.optimization.minimize = true
+      config.optimization.usedExports = true
+      config.optimization.sideEffects = false
+      config.optimization.providedExports = true
+
+      // 移除 console.log 和 debugger (生产环境)
+      config.optimization.minimizer.forEach(plugin => {
+        if (plugin.constructor.name === 'TerserPlugin') {
+          plugin.options.terserOptions.compress = {
+            ...plugin.options.terserOptions.compress,
+            drop_console: true,
+            drop_debugger: true,
+            pure_funcs: ['console.log', 'console.info', 'console.debug']
+          }
+        }
+      })
     }
+
+    // 开发环境源码映射
+    if (dev) {
+      config.devtool = 'eval-source-map'
+    }
+    
+    // 添加更多优化
+    if (!dev) {
+      // 忽略某些模块以减少包大小
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // 使用轻量级替代品
+        'moment': 'dayjs',
+        'lodash': 'lodash-es'
+      }
+      
+      // 添加更多压缩选项
+      config.optimization.concatenateModules = true
+      config.optimization.flagIncludedChunks = true
+      config.optimization.occurrenceOrder = true
+    }
+
     return config
   },
   experimental: {
