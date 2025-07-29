@@ -4,7 +4,7 @@
  * This generates robots.txt dynamically to avoid Cloudflare override issues
  * 
  * @author NotionNext Team
- * @version 1.0.0
+ * @version 1.0.1
  * @since 2024-01-29
  */
 
