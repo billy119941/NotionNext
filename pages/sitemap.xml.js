@@ -1,175 +1,156 @@
 /**
- * Simplified Sitemap Generator for NotionNext
+ * Enhanced Sitemap Generator for NotionNext
  * 
- * This is a simplified version that focuses on reliability over advanced features.
- * It generates a basic sitemap with fallback mechanisms for Vercel deployment.
+ * Uses next-sitemap for better reliability and multi-language support.
+ * Includes error handling and fallback mechanisms for Vercel deployment.
  * 
  * @author NotionNext Team
- * @version 2.1.0 (Simplified)
+ * @version 2.2.0 (Enhanced)
  * @since 2024-01-28
  */
 
 import BLOG from '@/blog.config'
+import { siteConfig } from '@/lib/config'
+import { getGlobalData } from '@/lib/db/getSiteData'
+import { extractLangId, extractLangPrefix } from '@/lib/utils/pageId'
+import { getServerSideSitemap } from 'next-sitemap'
 
 export const getServerSideProps = async ctx => {
-  const baseUrl = 'https://www.shareking.vip'
-  
-  try {
-    console.log('[Sitemap] Starting sitemap generation...')
-    
-    // 尝试获取数据
-    let allPages = []
+  let fields = []
+  const siteIds = BLOG.NOTION_PAGE_ID.split(',')
+
+  console.log('[Sitemap] Starting sitemap generation for', siteIds.length, 'sites')
+
+  for (let index = 0; index < siteIds.length; index++) {
+    const siteId = siteIds[index]
+    const id = extractLangId(siteId)
+    const locale = extractLangPrefix(siteId)
+
     try {
-      const { getGlobalData } = await import('@/lib/db/getSiteData')
-      const data = await getGlobalData({
-        pageId: BLOG.NOTION_PAGE_ID,
+      console.log(`[Sitemap] Processing site ${index + 1}/${siteIds.length}: ${id}`)
+      
+      // 第一个id站点默认语言
+      const siteData = await getGlobalData({
+        pageId: id,
         from: 'sitemap.xml'
       })
-      allPages = data?.allPages || []
-      console.log(`[Sitemap] Fetched ${allPages.length} pages from Notion`)
-    } catch (dataError) {
-      console.warn('[Sitemap] Failed to fetch Notion data:', dataError.message)
-      // 继续使用空数组，生成基础sitemap
+
+      const link = siteConfig(
+        'LINK',
+        siteData?.siteInfo?.link,
+        siteData.NOTION_CONFIG
+      ) || 'https://www.shareking.vip'
+
+      const localeFields = generateLocalesSitemap(link, siteData.allPages, locale)
+      fields = fields.concat(localeFields)
+      
+      console.log(`[Sitemap] Site ${id} processed: ${localeFields.length} URLs`)
+      
+    } catch (error) {
+      console.warn(`[Sitemap] Failed to process site ${id}:`, error.message)
+      
+      // 降级处理：使用基础配置生成基本sitemap
+      const fallbackLink = 'https://www.shareking.vip'
+      const fallbackFields = generateLocalesSitemap(fallbackLink, [], locale)
+      fields = fields.concat(fallbackFields)
+      
+      console.log(`[Sitemap] Using fallback for site ${id}: ${fallbackFields.length} URLs`)
     }
-
-    // 生成sitemap XML
-    const xml = generateSitemapXML(baseUrl, allPages)
-    
-    // 设置响应头
-    ctx.res.setHeader('Content-Type', 'application/xml')
-    ctx.res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=7200')
-    
-    ctx.res.write(xml)
-    ctx.res.end()
-
-    console.log('[Sitemap] Sitemap generated successfully')
-    return { props: {} }
-
-  } catch (error) {
-    console.error('[Sitemap] Critical error:', error)
-    
-    // 生成最基础的sitemap
-    const fallbackXml = generateFallbackSitemap(baseUrl)
-    
-    ctx.res.setHeader('Content-Type', 'application/xml')
-    ctx.res.setHeader('Cache-Control', 'public, max-age=300')
-    
-    ctx.res.write(fallbackXml)
-    ctx.res.end()
-
-    return { props: {} }
   }
+
+  fields = getUniqueFields(fields)
+  
+  console.log(`[Sitemap] Final sitemap: ${fields.length} unique URLs`)
+
+  // 缓存
+  ctx.res.setHeader(
+    'Cache-Control',
+    'public, max-age=3600, stale-while-revalidate=59'
+  )
+
+  return getServerSideSitemap(ctx, fields)
 }
 
 
 
-function generateSitemapXML(baseUrl, allPages) {
-  const currentDate = new Date().toISOString().split('T')[0]
-  
-  // 基础页面
-  const urls = [
-    { loc: baseUrl, lastmod: currentDate, changefreq: 'daily', priority: '1.0' },
-    { loc: `${baseUrl}/archive`, lastmod: currentDate, changefreq: 'daily', priority: '0.8' },
-    { loc: `${baseUrl}/category`, lastmod: currentDate, changefreq: 'daily', priority: '0.8' },
-    { loc: `${baseUrl}/search`, lastmod: currentDate, changefreq: 'weekly', priority: '0.6' },
-    { loc: `${baseUrl}/tag`, lastmod: currentDate, changefreq: 'daily', priority: '0.8' }
-  ]
+function generateLocalesSitemap(link, allPages, locale) {
+  // 确保链接不以斜杠结尾
+  if (link && link.endsWith('/')) {
+    link = link.slice(0, -1)
+  }
 
-  // 添加RSS链接
-  if (allPages && allPages.length > 0) {
-    urls.push({
-      loc: `${baseUrl}/rss/feed.xml`,
-      lastmod: currentDate,
+  if (locale && locale.length > 0 && locale.indexOf('/') !== 0) {
+    locale = '/' + locale
+  }
+
+  const dateNow = new Date().toISOString().split('T')[0]
+
+  const defaultFields = [
+    {
+      loc: `${link}${locale}`,
+      lastmod: dateNow,
       changefreq: 'daily',
       priority: '0.7'
-    })
-  }
+    },
+    {
+      loc: `${link}${locale}/archive`,
+      lastmod: dateNow,
+      changefreq: 'daily',
+      priority: '0.7'
+    },
+    {
+      loc: `${link}${locale}/category`,
+      lastmod: dateNow,
+      changefreq: 'daily',
+      priority: '0.7'
+    },
+    {
+      loc: `${link}${locale}/rss/feed.xml`,
+      lastmod: dateNow,
+      changefreq: 'daily',
+      priority: '0.7'
+    },
+    {
+      loc: `${link}${locale}/search`,
+      lastmod: dateNow,
+      changefreq: 'daily',
+      priority: '0.7'
+    },
+    {
+      loc: `${link}${locale}/tag`,
+      lastmod: dateNow,
+      changefreq: 'daily',
+      priority: '0.7'
+    }
+  ]
 
-  // 添加文章页面
-  if (allPages && Array.isArray(allPages)) {
+  const postFields =
     allPages
-      .filter(p => {
-        return p && 
-               p.status === 'Published' &&
-               p.slug &&
-               p.publishDay &&
-               typeof p.slug === 'string' &&
-               p.slug.length > 0
-      })
-      .forEach(post => {
-        try {
-          const postUrl = BLOG.PSEUDO_STATIC 
-            ? `${baseUrl}/${post.slug}.html`
-            : `${baseUrl}/${post.slug}`
-          
-          urls.push({
-            loc: postUrl,
-            lastmod: new Date(post.publishDay).toISOString().split('T')[0],
-            changefreq: 'weekly',
-            priority: '0.8'
-          })
-        } catch (error) {
-          console.warn('[Sitemap] Error processing post:', post.slug, error.message)
+      ?.filter(p => p.status === BLOG.NOTION_PROPERTY_NAME.status_publish)
+      ?.map(post => {
+        const slugWithoutLeadingSlash = post?.slug.startsWith('/')
+          ? post?.slug?.slice(1)
+          : post.slug
+        return {
+          loc: `${link}${locale}/${slugWithoutLeadingSlash}`,
+          lastmod: new Date(post?.publishDay).toISOString().split('T')[0],
+          changefreq: 'daily',
+          priority: '0.7'
         }
-      })
-  }
+      }) ?? []
 
-  // 生成XML
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(url => `  <url>
-    <loc>${escapeXml(url.loc)}</loc>
-    <lastmod>${url.lastmod}</lastmod>
-    <changefreq>${url.changefreq}</changefreq>
-    <priority>${url.priority}</priority>
-  </url>`).join('\n')}
-</urlset>`
-
-  console.log(`[Sitemap] Generated XML with ${urls.length} URLs`)
-  return xml
+  return defaultFields.concat(postFields)
 }
 
-function generateFallbackSitemap(baseUrl) {
-  const currentDate = new Date().toISOString().split('T')[0]
-  
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${baseUrl}</loc>
-    <lastmod>${currentDate}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/archive</loc>
-    <lastmod>${currentDate}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>${baseUrl}/category</loc>
-    <lastmod>${currentDate}</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-</urlset>`
-
-  console.log('[Sitemap] Generated fallback sitemap')
-  return xml
-}
-
-function escapeXml(unsafe) {
-  if (typeof unsafe !== 'string') return unsafe
-  return unsafe.replace(/[<>&'"]/g, function (c) {
-    switch (c) {
-      case '<': return '&lt;'
-      case '>': return '&gt;'
-      case '&': return '&amp;'
-      case '\'': return '&apos;'
-      case '"': return '&quot;'
-      default: return c
+function getUniqueFields(fields) {
+  const uniqueFieldsMap = new Map()
+  fields.forEach(field => {
+    const existingField = uniqueFieldsMap.get(field.loc)
+    if (!existingField || new Date(field.lastmod) > new Date(existingField.lastmod)) {
+      uniqueFieldsMap.set(field.loc, field)
     }
   })
+  return Array.from(uniqueFieldsMap.values())
 }
 
 
