@@ -46,7 +46,6 @@ Allow: /fonts/
 # Specific rules for major search engines
 User-agent: Googlebot
 Allow: /
-Crawl-delay: 1
 
 User-agent: Bingbot
 Allow: /
