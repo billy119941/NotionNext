@@ -12,7 +12,7 @@ import BLOG from '@/blog.config'
 
 export const getServerSideProps = async ctx => {
   const baseUrl = BLOG.LINK || 'https://www.shareking.vip'
-  const author = BLOG.AUTHOR || '分享之王'
+  const author = 'ShareKing' // 使用英文避免编码问题
   const currentDate = new Date().toISOString().split('T')[0]
   
   // Extract domain without protocol for Host declaration
@@ -135,12 +135,12 @@ Sitemap: ${baseUrl}/sitemap-index.xml`
   content += `
 
 # Additional information
-# For questions about this robots.txt, contact: ${author}@${domain}
+# For questions about this robots.txt, contact: longxiao0807@gmail.com
 `
 
   try {
     // Set response headers
-    ctx.res.setHeader('Content-Type', 'text/plain')
+    ctx.res.setHeader('Content-Type', 'text/plain; charset=utf-8')
     ctx.res.setHeader('Cache-Control', 'public, max-age=86400') // 24 hours cache
     
     ctx.res.write(content)
@@ -161,7 +161,7 @@ Sitemap: ${baseUrl}/sitemap.xml
 Host: ${domain}
 `
     
-    ctx.res.setHeader('Content-Type', 'text/plain')
+    ctx.res.setHeader('Content-Type', 'text/plain; charset=utf-8')
     ctx.res.setHeader('Cache-Control', 'public, max-age=300')
     
     ctx.res.write(fallbackContent)
