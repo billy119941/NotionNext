@@ -322,21 +322,23 @@ const nextConfig = {
     if (dev) {
       config.devtool = 'eval-source-map'
     }
-    
+
     // 添加更多优化
     if (!dev) {
       // 忽略某些模块以减少包大小
       config.resolve.alias = {
         ...config.resolve.alias,
         // 使用轻量级替代品
-        'moment': 'dayjs',
-        'lodash': 'lodash-es'
+        'moment': 'dayjs'
+        // 移除lodash别名，保持原有的lodash模块结构
       }
-      
+
       // 添加更多压缩选项
       config.optimization.concatenateModules = true
       config.optimization.flagIncludedChunks = true
-      config.optimization.occurrenceOrder = true
+      // occurrenceOrder 在 webpack 5 中已被移除，使用 chunkIds 和 moduleIds 替代
+      config.optimization.chunkIds = 'size'
+      config.optimization.moduleIds = 'size'
     }
 
     return config
