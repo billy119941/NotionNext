@@ -1,5 +1,6 @@
-Deployment trigger - Force Deploy
+Deployment trigger - Webhook Test
 This file is used to trigger Vercel deployment.
-Last updated: 2024-01-30 23:52
+Last updated: 2024-01-30 23:55
 Build command fixed: npm run build
 Sitemap optimization ready for production
+Testing webhook integration...
