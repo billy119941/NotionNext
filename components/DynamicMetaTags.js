@@ -1,11 +1,18 @@
 import { siteConfig } from '@/lib/config'
-import { 
-  generateDynamicKeywords, 
-  formatKeywordsString, 
-  optimizeMetaDescription,
-  optimizePageTitle
-} from '@/lib/seo/seoUtils'
-import { ensureAbsoluteUrl } from '@/lib/seo/urlUtils'
+// import { 
+//   generateDynamicKeywords, 
+//   formatKeywordsString, 
+//   optimizeMetaDescription,
+//   optimizePageTitle
+// } from '@/lib/seo/seoUtils' // 文件已删除
+// import { ensureAbsoluteUrl } from '@/lib/seo/urlUtils' // 文件已删除
+
+// 简单的替代函数
+const generateDynamicKeywords = (post, category) => post?.tags?.join(', ') || ''
+const formatKeywordsString = (keywords) => keywords
+const optimizeMetaDescription = (description) => description
+const optimizePageTitle = (title) => title
+const ensureAbsoluteUrl = (url, baseUrl) => url?.startsWith('http') ? url : `${baseUrl}${url}`
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useMemo } from 'react'

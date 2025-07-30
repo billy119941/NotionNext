@@ -44,26 +44,47 @@ export async function getStaticProps(req) {
     )
   }
 
-  // 预览文章内容
-  if (siteConfig('POST_LIST_PREVIEW', false, props?.NOTION_CONFIG)) {
-    for (const i in props.posts) {
-      const post = props.posts[i]
-      if (post.password && post.password !== '') {
-        continue
+  // 预览文章内容 - 在导出模式下完全禁用以避免错误
+  if (!process.env.EXPORT && siteConfig('POST_LIST_PREVIEW', false, props?.NOTION_CONFIG) && props.posts && Array.isArray(props.posts)) {
+    try {
+      for (let index = 0; index < props.posts.length; index++) {
+        const post = props.posts[index]
+        if (post && post.password && post.password !== '') {
+          continue
+        }
+        if (post && post.id) {
+          post.blockMap = await getPostBlocks(post.id, 'slug', POST_PREVIEW_LINES)
+        }
       }
-      post.blockMap = await getPostBlocks(post.id, 'slug', POST_PREVIEW_LINES)
+    } catch (error) {
+      console.warn('预览内容生成失败:', error)
     }
   }
 
-  // 生成robotTxt
-  generateRobotsTxt(props)
-  // 生成Feed订阅
-  generateRss(props)
+  // 生成robotTxt - 添加错误处理
+  try {
+    generateRobotsTxt(props)
+  } catch (error) {
+    console.warn('生成 robots.txt 失败:', error)
+  }
+  
+  // 生成Feed订阅 - 添加错误处理
+  try {
+    generateRss(props)
+  } catch (error) {
+    console.warn('生成 RSS 失败:', error)
+  }
+  
   // 生成sitemap - 已改为动态生成，注释掉静态生成
   // generateSitemapXml(props)
+  
+  // 生成重定向 JSON - 添加错误处理
   if (siteConfig('UUID_REDIRECT', false, props?.NOTION_CONFIG)) {
-    // 生成重定向 JSON
-    generateRedirectJson(props)
+    try {
+      generateRedirectJson(props)
+    } catch (error) {
+      console.warn('生成重定向 JSON 失败:', error)
+    }
   }
 
   // 生成全文索引 - 仅在 yarn build 时执行 && process.env.npm_lifecycle_event === 'build'

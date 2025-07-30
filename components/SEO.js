@@ -4,7 +4,7 @@ import { loadExternalResource } from '@/lib/utils'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useEffect } from 'react'
-import SEOEnhanced from './SEOEnhanced'
+// import SEOEnhanced from './SEOEnhanced' // 文件已删除
 
 /**
  * 页面的Head头，有用于SEO
@@ -14,10 +14,10 @@ import SEOEnhanced from './SEOEnhanced'
 const SEO = props => {
   const { children, siteInfo, post, NOTION_CONFIG, useEnhanced = false } = props
   
-  // 如果启用增强版SEO，使用SEOEnhanced组件
+  // 如果启用增强版SEO，使用SEOEnhanced组件 - 已禁用，文件已删除
   // 默认启用增强版SEO以确保最佳SEO效果
-  if (useEnhanced || siteConfig('SEO_ENHANCED_MODE', true, NOTION_CONFIG)) {
-    return <SEOEnhanced {...props} />
+  if (false && (useEnhanced || siteConfig('SEO_ENHANCED_MODE', true, NOTION_CONFIG))) {
+    // return <SEOEnhanced {...props} />
   }
   const PATH = siteConfig('PATH')
   const LINK = siteConfig('LINK')

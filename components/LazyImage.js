@@ -37,10 +37,10 @@ export default function LazyImage({
         return
       }
 
-      // 如果启用了自动ALT生成
-      if (siteConfig('SEO_AUTO_GENERATE_ALT', true)) {
+      // 如果启用了自动ALT生成 - 已禁用，文件已删除
+      if (false && siteConfig('SEO_AUTO_GENERATE_ALT', true)) {
         try {
-          const { generateImageAlt } = await import('@/lib/seo/imageSEO')
+          // const { generateImageAlt } = await import('@/lib/seo/imageSEO')
           
           const context = {
             siteName: siteConfig('TITLE'),
@@ -48,10 +48,10 @@ export default function LazyImage({
             title: typeof document !== 'undefined' ? document.title : ''
           }
 
-          const smartAlt = await generateImageAlt(src, context)
-          if (smartAlt && smartAlt.trim()) {
-            setGeneratedAlt(smartAlt)
-          }
+          // const smartAlt = await generateImageAlt(src, context)
+          // if (smartAlt && smartAlt.trim()) {
+          //   setGeneratedAlt(smartAlt)
+          // }
         } catch (error) {
           console.warn('Failed to generate smart alt for LazyImage:', error)
         }

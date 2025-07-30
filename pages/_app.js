@@ -24,20 +24,20 @@ const ClerkProvider = dynamic(() =>
   import('@clerk/nextjs').then(m => m.ClerkProvider)
 )
 
-// Web Vitals监控组件
-const WebVitalsMonitor = dynamic(() => import('@/components/WebVitalsMonitor'), {
-  ssr: false
-})
+// Web Vitals监控组件 - 已禁用，文件已删除
+// const WebVitalsMonitor = dynamic(() => import('@/components/WebVitalsMonitor'), {
+//   ssr: false
+// })
 
-// 图片SEO优化组件
-const ImageSEOOptimizer = dynamic(() => import('@/components/ImageSEOOptimizer'), {
-  ssr: false
-})
+// 图片SEO优化组件 - 已禁用，文件已删除
+// const ImageSEOOptimizer = dynamic(() => import('@/components/ImageSEOOptimizer'), {
+//   ssr: false
+// })
 
-// 404错误跟踪组件
-const NotFoundErrorTracker = dynamic(() => import('@/components/NotFoundErrorTracker'), {
-  ssr: false
-})
+// 404错误跟踪组件 - 已禁用，文件已删除
+// const NotFoundErrorTracker = dynamic(() => import('@/components/NotFoundErrorTracker'), {
+//   ssr: false
+// })
 
 /**
  * App挂载DOM 入口文件
@@ -74,9 +74,9 @@ const MyApp = ({ Component, pageProps }) => {
         <Component {...pageProps} />
       </GLayout>
       <ExternalPlugins {...pageProps} />
-      <WebVitalsMonitor />
-      <ImageSEOOptimizer />
-      <NotFoundErrorTracker />
+      {/* <WebVitalsMonitor /> */}
+      {/* <ImageSEOOptimizer /> */}
+      {/* <NotFoundErrorTracker /> */}
     </GlobalContextProvider>
   )
   return (

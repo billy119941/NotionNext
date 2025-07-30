@@ -39,11 +39,11 @@ const CustomImage = (props) => {
                 return
             }
 
-            // 如果启用了自动ALT生成
-            if (siteConfig('SEO_AUTO_GENERATE_ALT', true)) {
+            // 如果启用了自动ALT生成 - 已禁用，文件已删除
+            if (false && siteConfig('SEO_AUTO_GENERATE_ALT', true)) {
                 setIsLoading(true)
                 try {
-                    const { generateImageAlt } = await import('@/lib/seo/imageSEO')
+                    // const { generateImageAlt } = await import('@/lib/seo/imageSEO')
                     
                     const context = {
                         title: post?.title || '',
