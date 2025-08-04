@@ -101,7 +101,7 @@
     - _需求: 需求5.3, 需求8.3, 需求8.4_
 
 - [ ] 10. 实现单元测试
-  - [ ] 10.1 为核心组件编写单元测试
+  - [x] 10.1 为核心组件编写单元测试
     - 测试 SitemapDetector 的 sitemap 解析和差异检测
     - 测试 URLNormalizer 的 URL 处理逻辑
     - 测试 ErrorHandler 的重试机制
