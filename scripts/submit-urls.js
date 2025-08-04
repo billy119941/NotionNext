@@ -86,8 +86,23 @@ async function main() {
       return;
     }
 
+    // 3. 检查最近已提交的 URL，避免重复提交
+    logger.info('🔍 检查重复提交...');
+    const recentlySubmittedUrls = await cacheManager.getRecentlySubmittedUrls(6); // 检查最近6小时
+    const urlsToSubmit = normalizedUrls.filter(url => !recentlySubmittedUrls.includes(url));
+    
+    if (urlsToSubmit.length < normalizedUrls.length) {
+      const skippedCount = normalizedUrls.length - urlsToSubmit.length;
+      logger.info(`⏭️ 跳过 ${skippedCount} 个最近已提交的 URL，避免重复提交`);
+    }
+    
+    if (urlsToSubmit.length === 0) {
+      logger.info('✅ 所有 URL 都已在最近提交过，无需重复提交');
+      return;
+    }
+
     // 分类 URL 以便更好地了解内容类型
-    const categorizedUrls = urlNormalizer.categorizeUrls(normalizedUrls);
+    const categorizedUrls = urlNormalizer.categorizeUrls(urlsToSubmit);
 
     if (isTestMode) {
       logger.info('🧪 测试模式：跳过实际提交');
@@ -102,7 +117,7 @@ async function main() {
     await searchEngineSubmitter.initialize();
     
     // 提交 URL
-    const submissionResult = await searchEngineSubmitter.submitUrls(normalizedUrls);
+    const submissionResult = await searchEngineSubmitter.submitUrls(urlsToSubmit);
     
     // 记录提交结果到缓存
     await cacheManager.recordSubmission(submissionResult);

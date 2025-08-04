@@ -41,7 +41,10 @@ class GoogleIndexingClient {
         credentials.client_email,
         null,
         credentials.private_key,
-        this.config.google.scopes || ['https://www.googleapis.com/auth/indexing']
+        this.config.google.scopes || [
+          'https://www.googleapis.com/auth/indexing',
+          'https://www.googleapis.com/auth/webmasters'
+        ]
       );
 
       // 设置更宽松的网络配置

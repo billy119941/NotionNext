@@ -124,9 +124,13 @@ class CacheManager {
     try {
       const log = await this.getSubmissionLog();
       
+      // 提取成功提交的 URL
+      const submittedUrls = this.extractSubmittedUrls(submissionResult);
+      
       // 添加新的提交记录
       const newEntry = {
         timestamp: new Date().toISOString(),
+        submittedUrls: submittedUrls,
         ...submissionResult
       };
 
@@ -145,6 +149,74 @@ class CacheManager {
     } catch (error) {
       this.logger.error('❌ 记录提交结果失败', error);
       // 不抛出错误，避免影响主流程
+    }
+  }
+
+  /**
+   * 提取已成功提交的 URL 列表
+   * @param {Object} result 提交结果
+   * @returns {string[]} 成功提交的 URL 列表
+   */
+  extractSubmittedUrls(result) {
+    const submittedUrls = [];
+    
+    if (result.results) {
+      // 从 Google 结果中提取成功的 URL
+      if (result.results.google && Array.isArray(result.results.google)) {
+        result.results.google.forEach(item => {
+          if (item.success && item.url) {
+            submittedUrls.push(item.url);
+          }
+        });
+      }
+      
+      // 从 Bing 结果中提取成功的 URL
+      if (result.results.bing && Array.isArray(result.results.bing)) {
+        result.results.bing.forEach(item => {
+          if (item.success && item.url) {
+            submittedUrls.push(item.url);
+          }
+        });
+      }
+    }
+    
+    // 去重
+    return [...new Set(submittedUrls)];
+  }
+
+  /**
+   * 获取最近已提交的 URL（避免重复提交）
+   * @param {number} hours 检查最近几小时内的提交
+   * @returns {Promise<string[]>} 最近已提交的 URL 列表
+   */
+  async getRecentlySubmittedUrls(hours = 24) {
+    try {
+      const log = await this.getSubmissionLog();
+      
+      if (!log.submissions || !Array.isArray(log.submissions)) {
+        return [];
+      }
+
+      const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
+      const recentUrls = new Set();
+
+      log.submissions.forEach(submission => {
+        const submissionTime = new Date(submission.timestamp);
+        if (submissionTime > cutoffTime && submission.submittedUrls) {
+          submission.submittedUrls.forEach(url => recentUrls.add(url));
+        }
+      });
+
+      const urlList = Array.from(recentUrls);
+      if (urlList.length > 0) {
+        this.logger.debug(`📋 找到 ${urlList.length} 个最近 ${hours} 小时内已提交的 URL`);
+      }
+
+      return urlList;
+
+    } catch (error) {
+      this.logger.debug('📝 无法获取最近提交记录，可能是首次运行');
+      return [];
     }
   }
 

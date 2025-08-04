@@ -184,16 +184,17 @@ class SitemapDetector {
     // 如果没有缓存，返回所有 URL（但限制数量以避免首次运行时提交过多）
     if (!cachedSitemap) {
       this.logger.info('📝 首次运行，将提交最近的 URL');
-      // 只返回最近的 10 个 URL，避免首次运行时提交过多
+      // 只返回最近的 5 个 URL，避免首次运行时提交过多
       const recentUrls = currentSitemap.urls
         .sort((a, b) => {
           const dateA = new Date(a.lastmod || '1970-01-01');
           const dateB = new Date(b.lastmod || '1970-01-01');
           return dateB - dateA;
         })
-        .slice(0, 10)
+        .slice(0, 5)
         .map(url => url.loc);
       
+      this.logger.info(`🎯 首次运行选择了 ${recentUrls.length} 个最新 URL`);
       return recentUrls;
     }
 
@@ -208,6 +209,25 @@ class SitemapDetector {
     const newUrls = currentSitemap.urls
       .filter(url => !cachedUrls.has(url.loc))
       .map(url => url.loc);
+
+    // 如果新增URL过多，可能是缓存问题，限制数量
+    if (newUrls.length > 20) {
+      this.logger.warn(`⚠️ 检测到 ${newUrls.length} 个新增 URL，可能是缓存问题`);
+      this.logger.warn('🔧 限制为最近的 10 个 URL 以避免过度提交');
+      
+      // 按最后修改时间排序，取最新的10个
+      const sortedNewUrls = currentSitemap.urls
+        .filter(url => !cachedUrls.has(url.loc))
+        .sort((a, b) => {
+          const dateA = new Date(a.lastmod || '1970-01-01');
+          const dateB = new Date(b.lastmod || '1970-01-01');
+          return dateB - dateA;
+        })
+        .slice(0, 10)
+        .map(url => url.loc);
+      
+      return sortedNewUrls;
+    }
 
     return newUrls;
   }

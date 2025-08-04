@@ -31,6 +31,9 @@
     "submit-urls": "node scripts/submit-urls.js",
     "submit-urls:test": "node scripts/submit-urls.js --test",
     "validate-github-env": "node scripts/validate-github-env.js",
+    "deployment-verify": "node scripts/deployment-verification.js",
+    "diagnose-google": "node scripts/diagnose-google-permissions.js",
+    "check-permissions": "node scripts/check-search-console-permissions.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
@@ -80,6 +83,7 @@
     "eslint-plugin-react": "^7.34.3",
     "eslint-plugin-react-hooks": "^4.6.2",
     "jest": "^30.0.5",
+    "js-yaml": "^4.1.0",
     "next-sitemap": "^1.6.203",
     "node-mocks-http": "^1.17.2",
     "postcss": "^8.4.31",
