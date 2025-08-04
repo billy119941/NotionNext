@@ -48,7 +48,7 @@ jobs:
 
       - name: 安装依赖
         run: |
-          npm ci --only=production
+          npm install --omit=dev
           # 安装搜索引擎提交所需的额外依赖
           npm install googleapis@144.0.0 nodemailer@6.9.15 xml2js@0.6.2
 
@@ -109,10 +109,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: submission-logs-${{ github.run_number }}
-          path: |
-            .cache/*.json
-            .cache/*.log
+          path: .cache/
           retention-days: 7
+          if-no-files-found: ignore
 
       - name: 发送通知（成功）
         if: success() && github.event.inputs.test_mode != 'true'
@@ -147,7 +146,7 @@ jobs:
 
       - name: 安装依赖
         run: |
-          npm ci --only=production
+          npm install --omit=dev
           npm install googleapis@144.0.0 nodemailer@6.9.15 xml2js@0.6.2
 
       - name: 运行健康检查
