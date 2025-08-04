@@ -156,8 +156,25 @@ const LayoutIndex = props => {
  * @returns
  */
 const LayoutPostList = props => {
+  const { tag, category } = props
+  const { locale } = useGlobal()
+  
+  // 生成页面标题
+  let pageTitle = null
+  if (tag) {
+    pageTitle = `${locale.COMMON.TAGS}: ${tag}`
+  } else if (category) {
+    pageTitle = `${locale.COMMON.CATEGORY}: ${category}`
+  }
+
   return (
     <div id='post-outer-wrapper' className='px-5  md:px-0'>
+      {/* 页面标题 */}
+      {pageTitle && (
+        <h1 className='text-4xl font-extrabold dark:text-gray-200 mb-5 mt-8'>
+          {pageTitle}
+        </h1>
+      )}
       {/* 文章分类条 */}
       <CategoryBar {...props} />
       {siteConfig('POST_LIST_STYLE') === 'page' ? (
@@ -194,9 +211,17 @@ const LayoutSearch = props => {
       }, 100)
     }
   }, [])
+  const { locale } = useGlobal()
+  
   return (
     <div currentSearch={currentSearch}>
       <div id='post-outer-wrapper' className='px-5  md:px-0'>
+        {/* 搜索页面标题 */}
+        {currentSearch && (
+          <h1 className='text-4xl font-extrabold dark:text-gray-200 mb-5 mt-8'>
+            {locale.NAV.SEARCH}: "{currentSearch}"
+          </h1>
+        )}
         {!currentSearch ? (
           <SearchNav {...props} />
         ) : (
@@ -220,11 +245,16 @@ const LayoutSearch = props => {
  */
 const LayoutArchive = props => {
   const { archivePosts } = props
+  const { locale } = useGlobal()
 
   // 归档页顶部显示条，如果是默认归档则不显示。分类详情页显示分类列表，标签详情页显示当前标签
 
   return (
     <div className='p-5 rounded-xl border dark:border-gray-600 max-w-6xl w-full bg-white dark:bg-[#1e1e1e]'>
+      {/* 归档页面标题 */}
+      <h1 className='text-4xl font-extrabold dark:text-gray-200 mb-5'>
+        {locale.NAV.ARCHIVE}
+      </h1>
       {/* 文章分类条 */}
       <CategoryBar {...props} border={false} />
 
@@ -428,9 +458,9 @@ const LayoutCategoryIndex = props => {
 
   return (
     <div id='category-outer-wrapper' className='mt-8 px-5 md:px-0'>
-      <div className='text-4xl font-extrabold dark:text-gray-200 mb-5'>
+      <h1 className='text-4xl font-extrabold dark:text-gray-200 mb-5'>
         {locale.COMMON.CATEGORY}
-      </div>
+      </h1>
       <div
         id='category-list'
         className='duration-200 flex flex-wrap m-10 justify-center'>
@@ -470,9 +500,9 @@ const LayoutTagIndex = props => {
 
   return (
     <div id='tag-outer-wrapper' className='px-5 mt-8 md:px-0'>
-      <div className='text-4xl font-extrabold dark:text-gray-200 mb-5'>
+      <h1 className='text-4xl font-extrabold dark:text-gray-200 mb-5'>
         {locale.COMMON.TAGS}
-      </div>
+      </h1>
       <div
         id='tag-list'
         className='duration-200 flex flex-wrap space-x-5 space-y-5 m-10 justify-center'>
