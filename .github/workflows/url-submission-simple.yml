@@ -26,7 +26,7 @@ jobs:
         run: npm install --production
       
       - name: 恢复缓存
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .cache
           key: url-cache-${{ hashFiles('config/search-engine-submission.json') }}
@@ -40,7 +40,7 @@ jobs:
       
       - name: 保存缓存
         if: always()
-        uses: actions/cache/save@v3
+        uses: actions/cache/save@v4
         with:
           path: .cache
           key: url-cache-${{ hashFiles('config/search-engine-submission.json') }}-${{ github.run_id }}

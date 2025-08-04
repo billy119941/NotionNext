@@ -68,7 +68,7 @@ jobs:
           fi
 
       - name: 恢复缓存
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .cache
           key: sitemap-cache-${{ runner.os }}-${{ hashFiles('config/search-engine-submission.json') }}
@@ -106,7 +106,7 @@ jobs:
 
       - name: 上传执行日志
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: submission-logs-${{ github.run_number }}
           path: |
