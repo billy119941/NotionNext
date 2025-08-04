@@ -1,4 +1,4 @@
-// NextResponse removed as it's not used in this API route
+import { withErrorHandler, ValidationError, TimeoutError } from '@/lib/utils/apiErrorHandler'
 
 /**
  * 图片代理API - 解决Notion图片URL过期419错误
@@ -6,7 +6,7 @@
  * 使用方法:
  * /api/image-proxy?url=https://file.notion.so/...
  */
-export default async function handler(req, res) {
+async function handler(req, res) {
   // 只允许GET请求
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -16,27 +16,23 @@ export default async function handler(req, res) {
 
   // 验证URL参数
   if (!url) {
-    return res.status(400).json({ error: 'Missing url parameter' })
+    throw new ValidationError('缺少url参数')
   }
-
-  // 添加调试信息
-  console.log('Received URL:', url)
-  console.log('Is Notion URL:', isNotionImageUrl(url))
 
   // 验证是否为Notion图片URL
   if (!isNotionImageUrl(url)) {
-    return res.status(400).json({ 
-      error: 'Invalid Notion image URL',
-      receivedUrl: url,
-      debug: 'URL validation failed'
-    })
+    throw new ValidationError('无效的Notion图片URL')
   }
 
+  // 设置缓存头
+  res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400') // 24小时缓存
+  res.setHeader('CDN-Cache-Control', 'public, max-age=86400')
+  
+  // 创建AbortController用于超时控制
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10000) // 10秒超时
+  
   try {
-    // 设置缓存头
-    res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=86400') // 24小时缓存
-    res.setHeader('CDN-Cache-Control', 'public, max-age=86400')
-    
     // 代理请求到Notion
     const response = await fetch(url, {
       method: 'GET',
@@ -51,26 +47,27 @@ export default async function handler(req, res) {
         'Sec-Fetch-Mode': 'no-cors',
         'Sec-Fetch-Site': 'cross-site'
       },
-      timeout: 10000 // 10秒超时
+      signal: controller.signal
     })
+    
+    clearTimeout(timeoutId)
 
     // 检查响应状态
     if (!response.ok) {
       console.error(`Image proxy failed: ${response.status} ${response.statusText} for URL: ${url}`)
       
-      // 如果是419错误，尝试刷新URL
+      // 如果是419错误，抛出特定错误
       if (response.status === 419) {
-        return res.status(419).json({ 
-          error: 'Image URL expired', 
-          message: 'Please refresh the page to get updated image URLs',
-          code: 'IMAGE_EXPIRED'
-        })
+        const error = new Error('图片URL已过期')
+        error.statusCode = 419
+        error.code = 'IMAGE_EXPIRED'
+        throw error
       }
       
-      return res.status(response.status).json({ 
-        error: `Failed to fetch image: ${response.statusText}`,
-        originalStatus: response.status
-      })
+      // 其他HTTP错误
+      const error = new Error(`获取图片失败: ${response.statusText}`)
+      error.statusCode = response.status
+      throw error
     }
 
     // 获取内容类型
@@ -78,7 +75,7 @@ export default async function handler(req, res) {
     
     // 验证是否为图片类型
     if (!contentType.startsWith('image/')) {
-      return res.status(400).json({ error: 'Response is not an image' })
+      throw new ValidationError('响应内容不是图片格式')
     }
 
     // 设置响应头
@@ -94,28 +91,15 @@ export default async function handler(req, res) {
     res.status(200).send(buffer)
 
   } catch (error) {
-    console.error('Image proxy error:', error)
+    clearTimeout(timeoutId)
     
     // 处理超时错误
-    if (error.name === 'AbortError' || error.code === 'ECONNABORTED') {
-      return res.status(408).json({ 
-        error: 'Request timeout', 
-        message: 'Image loading timed out'
-      })
+    if (error.name === 'AbortError') {
+      throw new TimeoutError('图片加载超时')
     }
     
-    // 处理网络错误
-    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-      return res.status(502).json({ 
-        error: 'Network error', 
-        message: 'Unable to connect to image server'
-      })
-    }
-    
-    return res.status(500).json({ 
-      error: 'Internal server error',
-      message: 'Failed to proxy image'
-    })
+    // 重新抛出错误，让错误处理中间件处理
+    throw error
   }
 }
 
@@ -147,6 +131,8 @@ function isNotionImageUrl(url) {
     return false
   }
 }
+
+export default withErrorHandler(handler)
 
 // 导出配置
 export const config = {

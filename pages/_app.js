@@ -17,6 +17,7 @@ import { getQueryParam } from '../lib/utils'
 import BLOG from '@/blog.config'
 import ExternalPlugins from '@/components/ExternalPlugins'
 import SEO from '@/components/SEO'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import { zhCN } from '@clerk/localizations'
 import dynamic from 'next/dynamic'
 // import { ClerkProvider } from '@clerk/nextjs'
@@ -68,16 +69,18 @@ const MyApp = ({ Component, pageProps }) => {
 
   const enableClerk = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
   const content = (
-    <GlobalContextProvider {...pageProps}>
-      <GLayout {...pageProps}>
-        <SEO {...pageProps} />
-        <Component {...pageProps} />
-      </GLayout>
-      <ExternalPlugins {...pageProps} />
-      {/* <WebVitalsMonitor /> */}
-      {/* <ImageSEOOptimizer /> */}
-      {/* <NotFoundErrorTracker /> */}
-    </GlobalContextProvider>
+    <ErrorBoundary>
+      <GlobalContextProvider {...pageProps}>
+        <GLayout {...pageProps}>
+          <SEO {...pageProps} />
+          <Component {...pageProps} />
+        </GLayout>
+        <ExternalPlugins {...pageProps} />
+        {/* <WebVitalsMonitor /> */}
+        {/* <ImageSEOOptimizer /> */}
+        {/* <NotFoundErrorTracker /> */}
+      </GlobalContextProvider>
+    </ErrorBoundary>
   )
   return (
     <>
