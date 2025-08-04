@@ -27,7 +27,10 @@
     "lint:fix": "next lint --fix",
     "type-check": "tsc --noEmit",
     "clean-expired-images": "node scripts/clean-expired-images.js",
-    "check-images": "node scripts/clean-expired-images.js"
+    "check-images": "node scripts/clean-expired-images.js",
+    "submit-urls": "node scripts/submit-urls.js",
+    "submit-urls:test": "node scripts/submit-urls.js --test",
+    "validate-github-env": "node scripts/validate-github-env.js"
   },
   "dependencies": {
     "@clerk/localizations": "^3.0.4",
@@ -38,11 +41,13 @@
     "algoliasearch": "^4.18.0",
     "axios": "^1.7.2",
     "feed": "^4.2.2",
+    "googleapis": "^144.0.0",
     "ioredis": "^5.4.2",
     "js-md5": "^0.7.3",
     "lodash.throttle": "^4.1.1",
     "memory-cache": "^0.2.0",
     "next": "14.2.4",
+    "nodemailer": "^6.9.15",
     "notion-client": "7.3.0",
     "notion-utils": "7.3.0",
     "react": "^18.2.0",
@@ -51,7 +56,8 @@
     "react-hotkeys-hook": "^4.5.0",
     "react-notion-x": "7.3.0",
     "react-share": "^5.2.2",
-    "react-tweet-embed": "~2.0.0"
+    "react-tweet-embed": "~2.0.0",
+    "xml2js": "^0.6.2"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

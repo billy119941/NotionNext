@@ -1,0 +1,167 @@
+name: 自动搜索引擎提交
+
+on:
+  # 每2小时运行一次
+  schedule:
+    - cron: '0 */2 * * *'
+  
+  # 支持手动触发
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: '测试模式（不实际提交）'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      force_submit:
+        description: '强制提交（忽略缓存）'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  NODE_VERSION: '18'
+  SITEMAP_URL: 'https://www.shareking.vip/sitemap.xml'
+
+jobs:
+  submit-urls:
+    name: 提交 URL 到搜索引擎
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: |
+          npm ci --only=production
+          # 安装搜索引擎提交所需的额外依赖
+          npm install googleapis@144.0.0 nodemailer@6.9.15 xml2js@0.6.2
+
+      - name: 验证环境变量
+        run: |
+          echo "🔍 验证必需的环境变量..."
+          if [ -z "${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}" ]; then
+            echo "⚠️ GOOGLE_SERVICE_ACCOUNT_KEY 未设置"
+          else
+            echo "✅ GOOGLE_SERVICE_ACCOUNT_KEY 已设置"
+          fi
+          
+          if [ -z "${{ secrets.BING_API_KEY }}" ]; then
+            echo "⚠️ BING_API_KEY 未设置"
+          else
+            echo "✅ BING_API_KEY 已设置"
+          fi
+
+      - name: 恢复缓存
+        uses: actions/cache@v3
+        with:
+          path: .cache
+          key: sitemap-cache-${{ runner.os }}-${{ hashFiles('config/search-engine-submission.json') }}
+          restore-keys: |
+            sitemap-cache-${{ runner.os }}-
+
+      - name: 运行 URL 提交
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          BING_API_KEY: ${{ secrets.BING_API_KEY }}
+          NOTIFICATION_EMAIL: ${{ secrets.NOTIFICATION_EMAIL }}
+          SMTP_CONFIG: ${{ secrets.SMTP_CONFIG }}
+          # 根据输入参数设置环境变量
+          TEST_MODE: ${{ github.event.inputs.test_mode == 'true' && '--test' || '' }}
+          FORCE_SUBMIT: ${{ github.event.inputs.force_submit }}
+        run: |
+          echo "🚀 开始执行自动搜索引擎提交..."
+          echo "📅 执行时间: $(date)"
+          echo "🌐 网站: ${{ env.SITEMAP_URL }}"
+          
+          # 如果是强制提交模式，清理缓存
+          if [ "$FORCE_SUBMIT" = "true" ]; then
+            echo "🧹 强制提交模式：清理缓存"
+            rm -rf .cache
+          fi
+          
+          # 执行提交脚本
+          if [ "${{ github.event.inputs.test_mode }}" = "true" ]; then
+            echo "🧪 运行在测试模式"
+            npm run submit-urls:test
+          else
+            echo "🎯 运行在生产模式"
+            npm run submit-urls
+          fi
+
+      - name: 上传执行日志
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: submission-logs-${{ github.run_number }}
+          path: |
+            .cache/*.json
+            .cache/*.log
+          retention-days: 7
+
+      - name: 发送通知（成功）
+        if: success() && github.event.inputs.test_mode != 'true'
+        run: |
+          echo "✅ URL 提交任务执行成功"
+          echo "📊 执行时间: $(date)"
+          echo "🔗 查看详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: 发送通知（失败）
+        if: failure()
+        run: |
+          echo "❌ URL 提交任务执行失败"
+          echo "📊 执行时间: $(date)"
+          echo "🔗 查看详情: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "💡 请检查日志以了解失败原因"
+
+  # 健康检查任务（每天运行一次）
+  health-check:
+    name: 系统健康检查
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' && github.event.schedule == '0 0 * * *'
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 安装依赖
+        run: |
+          npm ci --only=production
+          npm install googleapis@144.0.0 nodemailer@6.9.15 xml2js@0.6.2
+
+      - name: 运行健康检查
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          BING_API_KEY: ${{ secrets.BING_API_KEY }}
+        run: |
+          echo "🏥 开始系统健康检查..."
+          node scripts/diagnose-apis.js
+
+      - name: 检查配额使用情况
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          BING_API_KEY: ${{ secrets.BING_API_KEY }}
+        run: |
+          echo "📊 检查 API 配额使用情况..."
+          # 这里可以添加配额检查脚本

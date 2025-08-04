@@ -1,0 +1,38 @@
+{
+  "sitemap": {
+    "url": "https://your-website.com/sitemap.xml",
+    "checkInterval": 2,
+    "cacheFile": ".cache/sitemap-cache.json"
+  },
+  "google": {
+    "indexingApiUrl": "https://indexing.googleapis.com/v3/urlNotifications:publish",
+    "quotaLimit": 200,
+    "scopes": ["https://www.googleapis.com/auth/indexing"]
+  },
+  "bing": {
+    "webmasterApiUrl": "https://ssl.bing.com/webmaster/api.svc/json/SubmitUrlbatch",
+    "quotaLimit": 10000
+  },
+  "notification": {
+    "enableEmail": true,
+    "emailTemplate": {
+      "success": "搜索引擎提交成功",
+      "failure": "搜索引擎提交失败"
+    }
+  },
+  "retry": {
+    "maxAttempts": 3,
+    "backoffMultiplier": 2,
+    "initialDelay": 1000
+  },
+  "logging": {
+    "level": "info",
+    "enableConsole": true,
+    "enableFile": false
+  },
+  "cache": {
+    "directory": ".cache",
+    "sitemapCacheFile": "sitemap-cache.json",
+    "submissionLogFile": "submission-log.json"
+  }
+}

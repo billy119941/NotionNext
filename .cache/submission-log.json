@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "createdAt": "2025-08-04T10:50:05.641Z",
+  "submissions": [
+    {
+      "timestamp": "2025-08-04T10:50:05.641Z",
+      "success": true,
+      "totalUrls": 10,
+      "submittedUrls": [
+        "https://www.shareking.vip/",
+        "https://www.shareking.vip/archive",
+        "https://www.shareking.vip/category",
+        "https://www.shareking.vip/search",
+        "https://www.shareking.vip/tag",
+        "https://www.shareking.vip/movie/sishenlaile",
+        "https://www.shareking.vip/games/mingmo-yuanxu-zhiyu-ultimate-guide",
+        "https://www.shareking.vip/books/oxford-picture-dictionary-3rd-edition-free-download",
+        "https://www.shareking.vip/books/english-enlightenment-solution-jian-wu-neng-liao",
+        "https://www.shareking.vip/movie/dishisuxiaoshuo-1994"
+      ],
+      "failedUrls": [],
+      "results": [
+        {
+          "engine": "bing",
+          "success": true,
+          "submittedUrls": [
+            "https://www.shareking.vip/",
+            "https://www.shareking.vip/archive",
+            "https://www.shareking.vip/category",
+            "https://www.shareking.vip/search",
+            "https://www.shareking.vip/tag",
+            "https://www.shareking.vip/movie/sishenlaile",
+            "https://www.shareking.vip/games/mingmo-yuanxu-zhiyu-ultimate-guide",
+            "https://www.shareking.vip/books/oxford-picture-dictionary-3rd-edition-free-download",
+            "https://www.shareking.vip/books/english-enlightenment-solution-jian-wu-neng-liao",
+            "https://www.shareking.vip/movie/dishisuxiaoshuo-1994"
+          ],
+          "failedUrls": [],
+          "errors": [],
+          "quota": {
+            "used": 10,
+            "remaining": 9990
+          }
+        }
+      ],
+      "summary": {
+        "totalEngines": 1,
+        "successfulEngines": 1,
+        "failedEngines": 0
+      }
+    }
+  ],
+  "statistics": {
+    "totalSubmissions": 1,
+    "successfulSubmissions": 1,
+    "failedSubmissions": 0,
+    "lastSubmission": "2025-08-04T10:50:05.641Z",
+    "engines": {
+      "google": {
+        "totalSubmissions": 0,
+        "successfulSubmissions": 0,
+        "failedSubmissions": 0
+      },
+      "bing": {
+        "totalSubmissions": 1,
+        "successfulSubmissions": 1,
+        "failedSubmissions": 0
+      }
+    }
+  },
+  "lastUpdated": "2025-08-04T10:50:05.641Z"
+}
