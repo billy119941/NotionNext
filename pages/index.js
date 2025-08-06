@@ -61,11 +61,13 @@ export async function getStaticProps(req) {
     }
   }
 
-  // 生成robotTxt - 添加错误处理
-  try {
-    generateRobotsTxt(props)
-  } catch (error) {
-    console.warn('生成 robots.txt 失败:', error)
+  // 生成robotTxt - 添加错误处理和条件检查
+  if (!process.env.EXPORT) {
+    try {
+      generateRobotsTxt(props)
+    } catch (error) {
+      console.warn('生成 robots.txt 失败:', error)
+    }
   }
   
   // 生成Feed订阅 - 添加错误处理
