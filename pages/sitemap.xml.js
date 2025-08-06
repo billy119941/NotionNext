@@ -165,7 +165,7 @@ function isValidSlug(slug) {
   }
 
   // 检查是否为空或只有斜杠
-  if (slug.trim() === '' || slug.trim() === '/') {
+  if (typeof slug === 'string' && (slug.trim() === '' || slug.trim() === '/')) {
     return false
   }
 
@@ -298,7 +298,7 @@ function generateSiteUrls(baseUrl, allPages, locale) {
           }
 
           // 清理 slug
-          let cleanSlug = fixedSlug.startsWith('/') ? fixedSlug.slice(1) : fixedSlug
+          let cleanSlug = (typeof fixedSlug === 'string' && fixedSlug.startsWith('/')) ? fixedSlug.slice(1) : fixedSlug
 
           // 验证清理后的slug
           if (!isValidSlug(cleanSlug)) {
