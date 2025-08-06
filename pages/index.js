@@ -1,11 +1,11 @@
 import BLOG from '@/blog.config'
 import { siteConfig } from '@/lib/config'
 import { getGlobalData, getPostBlocks } from '@/lib/db/getSiteData'
-// import { generateRobotsTxt } from '@/lib/robots.txt'
-// import { generateRss } from '@/lib/rss'
+import { generateRobotsTxt } from '@/lib/robots.txt'
+import { generateRss } from '@/lib/rss'
 // import { generateSitemapXml } from '@/lib/sitemap.xml' // 已改为动态生成
 import { DynamicLayout } from '@/themes/theme'
-// import { generateRedirectJson } from '@/lib/redirect'
+import { generateRedirectJson } from '@/lib/redirect'
 
 /**
  * 首页布局
@@ -13,20 +13,8 @@ import { DynamicLayout } from '@/themes/theme'
  * @returns
  */
 const Index = props => {
-  // 临时简化组件以排查问题
-  try {
-    const theme = siteConfig('THEME', BLOG.THEME, props?.NOTION_CONFIG)
-    return <DynamicLayout theme={theme} layoutName='LayoutIndex' {...props} />
-  } catch (error) {
-    console.error('Index component error:', error)
-    return (
-      <div style={{ padding: '20px', textAlign: 'center' }}>
-        <h1>网站正在维护中</h1>
-        <p>我们正在修复一些技术问题，请稍后再试。</p>
-        <p>错误信息: {error.message}</p>
-      </div>
-    )
-  }
+  const theme = siteConfig('THEME', BLOG.THEME, props?.NOTION_CONFIG)
+  return <DynamicLayout theme={theme} layoutName='LayoutIndex' {...props} />
 }
 
 /**
@@ -73,33 +61,33 @@ export async function getStaticProps(req) {
     }
   }
 
-  // 生成robotTxt - 临时完全禁用以排查问题
-  // if (!process.env.EXPORT) {
-  //   try {
-  //     generateRobotsTxt(props)
-  //   } catch (error) {
-  //     console.warn('生成 robots.txt 失败:', error)
-  //   }
-  // }
+  // 生成robotTxt - 添加错误处理和条件检查
+  if (!process.env.EXPORT) {
+    try {
+      generateRobotsTxt(props)
+    } catch (error) {
+      console.warn('生成 robots.txt 失败:', error)
+    }
+  }
   
-  // 生成Feed订阅 - 临时禁用以排查问题
-  // try {
-  //   generateRss(props)
-  // } catch (error) {
-  //   console.warn('生成 RSS 失败:', error)
-  // }
+  // 生成Feed订阅 - 添加错误处理
+  try {
+    generateRss(props)
+  } catch (error) {
+    console.warn('生成 RSS 失败:', error)
+  }
   
   // 生成sitemap - 已改为动态生成，注释掉静态生成
   // generateSitemapXml(props)
   
-  // 生成重定向 JSON - 临时禁用以排查问题
-  // if (siteConfig('UUID_REDIRECT', false, props?.NOTION_CONFIG)) {
-  //   try {
-  //     generateRedirectJson(props)
-  //   } catch (error) {
-  //     console.warn('生成重定向 JSON 失败:', error)
-  //   }
-  // }
+  // 生成重定向 JSON - 添加错误处理
+  if (siteConfig('UUID_REDIRECT', false, props?.NOTION_CONFIG)) {
+    try {
+      generateRedirectJson(props)
+    } catch (error) {
+      console.warn('生成重定向 JSON 失败:', error)
+    }
+  }
 
   // 生成全文索引 - 仅在 yarn build 时执行 && process.env.npm_lifecycle_event === 'build'
 
