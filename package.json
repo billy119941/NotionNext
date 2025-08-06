@@ -73,6 +73,7 @@
     "react-notion-x": "7.3.0",
     "react-share": "^5.2.2",
     "react-tweet-embed": "~2.0.0",
+    "sharp": "^0.34.3",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {

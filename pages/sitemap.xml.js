@@ -159,7 +159,7 @@ function isValidSlug(slug) {
   }
 
   // 检查是否只是片段标识符
-  if (slug === '#' || slug.startsWith('#')) {
+  if (slug === '#' || (typeof slug === 'string' && slug.startsWith('#'))) {
     console.warn('[Sitemap] Slug is fragment identifier:', slug)
     return false
   }

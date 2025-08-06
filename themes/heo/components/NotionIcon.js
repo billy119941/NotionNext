@@ -6,7 +6,7 @@ import LazyImage from '@/components/LazyImage'
  * @returns
  */
 const NotionIcon = ({ icon, className = 'w-8 h-8 my-auto inline mr-1' }) => {
-  if (!icon) {
+  if (!icon || typeof icon !== 'string') {
     return <></>
   }
 
