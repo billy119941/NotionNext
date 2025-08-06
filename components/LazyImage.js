@@ -3,7 +3,7 @@ import Head from 'next/head'
 import { useEffect, useRef, useState } from 'react'
 
 /**
- * 图片懒加载
+ * 图片懒加载 - 增强版渐进式加载
  * @param {*} param0
  * @returns
  */
@@ -28,6 +28,11 @@ export default function LazyImage({
     placeholderSrc || defaultPlaceholderSrc
   )
   const [generatedAlt, setGeneratedAlt] = useState('')
+  
+  // 渐进式加载状态
+  const [loadingState, setLoadingState] = useState('placeholder') // placeholder -> lowQuality -> highQuality
+  const [isLoading, setIsLoading] = useState(false)
+  const [preloadedImages, setPreloadedImages] = useState(new Set())
 
   // 自动生成ALT属性
   useEffect(() => {
