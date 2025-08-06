@@ -184,7 +184,7 @@ export default function LazyImage({
  * @returns {boolean} 是否应该预加载
  */
 const shouldPreloadImage = (src) => {
-  if (!src) return false
+  if (!src || typeof src !== 'string') return false
   
   const srcLower = src.toLowerCase()
   

@@ -35,13 +35,14 @@ export default function SideBarContent({ allNavPages, siteInfo }) {
       return
     }
     const filtered = allGames?.filter(item => {
+      if (typeof search !== 'string') return false
+      const searchLower = search.toLowerCase()
+      
       return (
-        item.title.toLowerCase().includes(search.toLowerCase()) ||
-        item.short_id?.toLowerCase().includes(search.toLowerCase()) ||
-        item.short_id
-          ?.toLowerCase()
-          .replace('-', '')
-          .includes(search.toLowerCase().replace('-', ''))
+        (typeof item.title === 'string' && item.title.toLowerCase().includes(searchLower)) ||
+        (typeof item.short_id === 'string' && item.short_id.toLowerCase().includes(searchLower)) ||
+        (typeof item.short_id === 'string' && 
+         item.short_id.toLowerCase().replace('-', '').includes(searchLower.replace('-', '')))
       )
     })
 

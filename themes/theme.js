@@ -178,9 +178,14 @@ export const initDarkMode = (updateDarkMode, defaultDarkMode) => {
   }
 
   updateDarkMode(newDarkMode)
-  document
-    .getElementsByTagName('html')[0]
-    .setAttribute('class', newDarkMode ? 'dark' : 'light')
+  
+  // 安全地操作DOM
+  if (typeof document !== 'undefined') {
+    const htmlElement = document.getElementsByTagName('html')[0]
+    if (htmlElement) {
+      htmlElement.setAttribute('class', newDarkMode ? 'dark' : 'light')
+    }
+  }
 }
 
 /**

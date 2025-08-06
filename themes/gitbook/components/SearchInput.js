@@ -45,8 +45,10 @@ const SearchInput = ({ currentSearch, cRef, className }) => {
 
     for (let i = filterAllNavPages.length - 1; i >= 0; i--) {
       const post = filterAllNavPages[i]
-      const articleInfo = post.title + ''
-      const hit = articleInfo.toLowerCase().indexOf(keyword.toLowerCase()) > -1
+      const articleInfo = (post.title || '') + ''
+      const hit = typeof articleInfo === 'string' && typeof keyword === 'string'
+        ? articleInfo.toLowerCase().indexOf(keyword.toLowerCase()) > -1
+        : false
       if (!hit) {
         // 删除
         filterAllNavPages.splice(i, 1)

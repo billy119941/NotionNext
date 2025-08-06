@@ -42,6 +42,25 @@ class ErrorBoundary extends React.Component {
         }}>
           <h2>页面加载出现问题</h2>
           <p>我们正在努力修复这个问题，请稍后再试。</p>
+          
+          {/* 开发环境显示详细错误信息 */}
+          {process.env.NODE_ENV === 'development' && (
+            <details style={{ marginTop: '20px', textAlign: 'left', maxWidth: '80%' }}>
+              <summary style={{ cursor: 'pointer', marginBottom: '10px' }}>查看错误详情</summary>
+              <pre style={{ 
+                backgroundColor: '#f5f5f5', 
+                padding: '10px', 
+                borderRadius: '5px',
+                fontSize: '12px',
+                overflow: 'auto',
+                maxHeight: '300px'
+              }}>
+                {this.state.error && this.state.error.toString()}
+                {this.state.errorInfo && this.state.errorInfo.componentStack}
+              </pre>
+            </details>
+          )}
+          
           <button 
             onClick={() => window.location.reload()}
             style={{

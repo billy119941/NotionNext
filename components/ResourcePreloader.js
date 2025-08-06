@@ -108,7 +108,7 @@ export default function ResourcePreloader({
 
   // 判断是否应该预加载图片
   const shouldPreloadImage = (imageUrl) => {
-    if (!imageUrl) return false
+    if (!imageUrl || typeof imageUrl !== 'string') return false
     
     try {
       // 避免预加载过大的图片
@@ -136,7 +136,7 @@ export default function ResourcePreloader({
       
       // 只预加载首屏可能用到的图片格式
       const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.avif']
-      const hasAllowedExtension = allowedExtensions.some(ext => 
+      const hasAllowedExtension = typeof imageUrl === 'string' && allowedExtensions.some(ext => 
         imageUrl.toLowerCase().includes(ext)
       )
       

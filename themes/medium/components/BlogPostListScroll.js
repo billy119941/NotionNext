@@ -23,8 +23,10 @@ const BlogPostListScroll = ({ posts = [], currentSearch }) => {
   if (searchKey) {
     filteredPosts = posts.filter(post => {
       const tagContent = post?.tags ? post?.tags.join(' ') : ''
-      const searchContent = post.title + post.summary + tagContent
-      return searchContent.toLowerCase().includes(searchKey.toLowerCase())
+      const searchContent = (post.title || '') + (post.summary || '') + tagContent
+      return typeof searchContent === 'string' && typeof searchKey === 'string'
+        ? searchContent.toLowerCase().includes(searchKey.toLowerCase())
+        : false
     })
   }
   const postsToShow = getPostByPage(page, filteredPosts, POSTS_PER_PAGE)

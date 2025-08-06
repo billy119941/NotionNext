@@ -48,6 +48,12 @@ const BLOG = {
   SEO_SITEMAP_IMAGES: process.env.NEXT_PUBLIC_SEO_SITEMAP_IMAGES || true, // 启用图片sitemap
   SEO_SITEMAP_NEWS: process.env.NEXT_PUBLIC_SEO_SITEMAP_NEWS || false, // 启用新闻sitemap
   SEO_SITEMAP_VIDEOS: process.env.NEXT_PUBLIC_SEO_SITEMAP_VIDEOS || false, // 启用视频sitemap
+
+  // WebP图片转换配置
+  WEBP_ENABLE_AUTO_CONVERSION: process.env.NEXT_PUBLIC_WEBP_ENABLE_AUTO_CONVERSION || true, // 启用WebP自动转换
+  WEBP_CONVERSION_ENDPOINT: process.env.NEXT_PUBLIC_WEBP_CONVERSION_ENDPOINT || '/api/webp-conversion', // WebP转换API端点
+  WEBP_QUALITY: process.env.NEXT_PUBLIC_WEBP_QUALITY || 80, // WebP质量 (1-100)
+  WEBP_ENABLE_FALLBACK: process.env.NEXT_PUBLIC_WEBP_ENABLE_FALLBACK || true, // 启用降级处理
   SEO_SITEMAP_CHANGEFREQ_HOME: process.env.NEXT_PUBLIC_SEO_SITEMAP_CHANGEFREQ_HOME || 'daily', // 首页更新频率
   SEO_SITEMAP_CHANGEFREQ_POSTS: process.env.NEXT_PUBLIC_SEO_SITEMAP_CHANGEFREQ_POSTS || 'weekly', // 文章更新频率
 

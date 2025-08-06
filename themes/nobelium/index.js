@@ -125,8 +125,10 @@ const LayoutPostList = props => {
   if (filterKey && posts) {
     filteredBlogPosts = posts.filter(post => {
       const tagContent = post?.tags ? post?.tags.join(' ') : ''
-      const searchContent = post.title + post.summary + tagContent
-      return searchContent.toLowerCase().includes(filterKey.toLowerCase())
+      const searchContent = (post.title || '') + (post.summary || '') + tagContent
+      return typeof searchContent === 'string' && typeof filterKey === 'string'
+        ? searchContent.toLowerCase().includes(filterKey.toLowerCase())
+        : false
     })
   } else {
     filteredBlogPosts = deepClone(posts)
@@ -172,8 +174,10 @@ const LayoutSearch = props => {
   if (filterKey && posts) {
     filteredBlogPosts = posts.filter(post => {
       const tagContent = post?.tags ? post?.tags.join(' ') : ''
-      const searchContent = post.title + post.summary + tagContent
-      return searchContent.toLowerCase().includes(filterKey.toLowerCase())
+      const searchContent = (post.title || '') + (post.summary || '') + tagContent
+      return typeof searchContent === 'string' && typeof filterKey === 'string'
+        ? searchContent.toLowerCase().includes(filterKey.toLowerCase())
+        : false
     })
   } else {
     filteredBlogPosts = deepClone(posts)

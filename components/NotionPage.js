@@ -200,7 +200,15 @@ const NotionPage = ({ post, className }) => {
       <NotionRenderer
         recordMap={post?.blockMap}
         mapPageUrl={mapPageUrl}
-        mapImageUrl={mapImgUrl}
+        mapImageUrl={(img, block, type) => {
+          // 获取用户代理字符串
+          const userAgent = typeof window !== 'undefined' 
+            ? navigator.userAgent 
+            : null
+          
+          // 使用文章ID进行WebP转换
+          return mapImgUrl(img, block, type, true, userAgent, post?.id)
+        }}
         components={{
           Image: (imageProps) => <CustomImage {...imageProps} post={post} />,
           Code,
