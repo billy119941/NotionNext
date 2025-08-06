@@ -273,7 +273,7 @@ function generateSiteUrls(baseUrl, allPages, locale) {
           }
 
           // 如果修正后的slug是完整URL，直接使用
-          if (fixedSlug.startsWith('http')) {
+          if (typeof fixedSlug === 'string' && fixedSlug.startsWith('http')) {
             const cleanUrl = validateAndCleanUrl(fixedSlug)
             if (cleanUrl) {
               // 只有当文章有有效发布日期时才使用，否则使用当前日期

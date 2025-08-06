@@ -155,7 +155,7 @@ function BreadcrumbStructuredData({ breadcrumbs, baseUrl }) {
         '@type': 'ListItem',
         position: index + 1,
         name: crumb.originalName || crumb.name,
-        item: crumb.url.startsWith('http') ? crumb.url : `${baseUrl || ''}${crumb.url}`
+        item: (typeof crumb.url === 'string' && crumb.url.startsWith('http')) ? crumb.url : `${baseUrl || ''}${crumb.url}`
       }))
   }
   

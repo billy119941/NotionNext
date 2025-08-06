@@ -20,6 +20,8 @@ export function Swipe({ items }) {
     const interval = setInterval(() => {
       setActiveIndex((activeIndex + 1) % items.length)
     }, 3000)
+    
+    return () => clearInterval(interval)
     return () => clearInterval(interval)
   }, [activeIndex, items.length])
 

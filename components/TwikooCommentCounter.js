@@ -37,7 +37,7 @@ const TwikooCommentCounter = (props) => {
    */
   const fetchTwikooData = async (posts) => {
     posts.forEach(post => {
-      post.slug = post.slug.startsWith('/') ? post.slug : `/${post.slug}`
+      post.slug = (typeof post.slug === 'string' && post.slug.startsWith('/')) ? post.slug : `/${post.slug}`
     })
     try {
       await loadExternalResource(twikooCDNURL, 'js')

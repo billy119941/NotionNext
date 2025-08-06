@@ -18,7 +18,7 @@ export default function SimpleCanonicalUrl() {
     }
     
     // 确保路径以/开头
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`
+    const normalizedPath = (typeof path === 'string' && path.startsWith('/')) ? path : `/${path}`
     return `${baseUrl}${normalizedPath}`
   }
   
