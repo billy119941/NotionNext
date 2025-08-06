@@ -110,8 +110,10 @@ const isIterable = obj =>
  */
 async function filterByMemCache(allPosts, keyword) {
   const filterPosts = []
-  if (keyword) {
+  if (keyword && typeof keyword === 'string') {
     keyword = keyword.trim().toLowerCase()
+  } else {
+    keyword = ''
   }
   for (const post of allPosts) {
     const cacheKey = 'page_block_' + post.id
@@ -122,8 +124,10 @@ async function filterByMemCache(allPosts, keyword) {
       post.category && Array.isArray(post.category)
         ? post.category.join(' ')
         : ''
-    const articleInfo = post.title + post.summary + tagContent + categoryContent
-    let hit = articleInfo.toLowerCase().indexOf(keyword) > -1
+    const articleInfo = (post.title || '') + (post.summary || '') + tagContent + categoryContent
+    let hit = typeof articleInfo === 'string' && typeof keyword === 'string' 
+      ? articleInfo.toLowerCase().indexOf(keyword) > -1 
+      : false
     const indexContent = getPageContentText(post, page)
     // console.log('全文搜索缓存', cacheKey, page != null)
     post.results = []

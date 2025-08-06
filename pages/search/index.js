@@ -22,8 +22,10 @@ const Search = props => {
       const tagContent = post?.tags ? post?.tags.join(' ') : ''
       const categoryContent = post.category ? post.category.join(' ') : ''
       const searchContent =
-        post.title + post.summary + tagContent + categoryContent
-      return searchContent.toLowerCase().includes(keyword.toLowerCase())
+        (post.title || '') + (post.summary || '') + tagContent + categoryContent
+      return typeof searchContent === 'string' && typeof keyword === 'string' 
+        ? searchContent.toLowerCase().includes(keyword.toLowerCase())
+        : false
     })
   } else {
     filteredPosts = []

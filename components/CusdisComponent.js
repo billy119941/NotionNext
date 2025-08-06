@@ -8,7 +8,10 @@ const CusdisComponent = ({ frontMatter }) => {
   const router = useRouter()
   const { isDarkMode, lang } = useGlobal()
   const src = siteConfig('COMMENT_CUSDIS_SCRIPT_SRC')
-  const i18nForCusdis = siteConfig('LANG').toLowerCase().indexOf('zh') === 0 ? siteConfig('LANG').toLowerCase() : siteConfig('LANG').toLowerCase().substring(0, 2)
+  const langConfig = siteConfig('LANG') || 'en'
+  const i18nForCusdis = typeof langConfig === 'string' && langConfig.toLowerCase().indexOf('zh') === 0 
+    ? langConfig.toLowerCase() 
+    : (typeof langConfig === 'string' ? langConfig.toLowerCase().substring(0, 2) : 'en')
   const langCDN = siteConfig('COMMENT_CUSDIS_LANG_SRC', `https://cusdis.com/js/widget/lang/${i18nForCusdis}.js`)
 
   //   处理cusdis主题
@@ -24,12 +27,12 @@ const CusdisComponent = ({ frontMatter }) => {
   }
 
   return <div id="cusdis_thread"
-        lang={lang.toLowerCase()}
+        lang={typeof lang === 'string' ? lang.toLowerCase() : 'en'}
         data-host={siteConfig('COMMENT_CUSDIS_HOST')}
         data-app-id={siteConfig('COMMENT_CUSDIS_APP_ID')}
-        data-page-id={frontMatter.id}
+        data-page-id={frontMatter?.id}
         data-page-url={siteConfig('LINK') + router.asPath}
-        data-page-title={frontMatter.title}
+        data-page-title={frontMatter?.title}
         data-theme={isDarkMode ? 'dark' : 'light'}
     ></div>
 }
