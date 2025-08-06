@@ -1,0 +1,39 @@
+# 现代浏览器配置 - 激进减少polyfills
+# 支持ES2022+特性的浏览器，大幅减少polyfills需求
+
+# 生产环境 - 激进的现代浏览器支持
+[production]
+> 2%
+last 1 version
+not dead
+not ie 11
+not op_mini all
+not android < 5
+not safari < 14.1
+Chrome >= 92
+Firefox >= 90
+Safari >= 14.1
+Edge >= 92
+iOS >= 14.5
+Android >= 92
+
+# 开发环境 - 最新版本
+[development]
+last 1 chrome version
+last 1 firefox version
+last 1 safari version
+
+# 默认配置 - 与生产环境保持一致
+> 2%
+last 1 version
+not dead
+not ie 11
+not op_mini all
+not android < 5
+not safari < 14.1
+Chrome >= 92
+Firefox >= 90
+Safari >= 14.1
+Edge >= 92
+iOS >= 14.5
+Android >= 92

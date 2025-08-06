@@ -3,6 +3,22 @@
   "version": "4.8.5",
   "homepage": "https://github.com/tangly1024/NotionNext.git",
   "license": "MIT",
+  "sideEffects": [
+    "*.css",
+    "*.scss",
+    "*.sass",
+    "*.less",
+    "./lib/global.js",
+    "./pages/_app.js",
+    "./pages/_document.js",
+    "./components/ExternalScript.js",
+    "./components/Gtag.js",
+    "./components/PWA.js",
+    "./components/LoadingProgress.js",
+    "./components/GlobalStyle.js",
+    "./components/Lenis.js",
+    "./components/AOSAnimation.js"
+  ],
   "engines": {
     "node": ">=20"
   },

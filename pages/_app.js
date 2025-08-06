@@ -10,8 +10,11 @@ import useAdjustStyle from '@/hooks/useAdjustStyle'
 import { GlobalContextProvider } from '@/lib/global'
 import { getBaseLayoutByTheme } from '@/themes/theme'
 import { useRouter } from 'next/router'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useEffect } from 'react'
 import { getQueryParam } from '../lib/utils'
+
+// 动态导入管理系统
+import routeCodeSplittingManager from '@/lib/utils/routeCodeSplitting'
 
 // 各种扩展插件 这个要阻塞引入
 import BLOG from '@/blog.config'
@@ -57,6 +60,21 @@ const MyApp = ({ Component, pageProps }) => {
       BLOG.THEME
     )
   }, [route])
+
+  // 初始化动态导入管理系统
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      routeCodeSplittingManager.initialize(theme, {
+        enableSmartPreload: true,
+        preloadHighPriority: true,
+        preloadThemeComponents: true
+      })
+
+      // 根据当前路由预加载相关组件
+      const currentRoute = route.pathname.split('/')[1] || 'home'
+      routeCodeSplittingManager.preloadRelatedComponents(currentRoute)
+    }
+  }, [theme, route.pathname])
 
   // 整体布局
   const GLayout = useCallback(

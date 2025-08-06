@@ -257,35 +257,178 @@ const nextConfig = {
       THEME
     )
 
+    // 减少polyfills - 针对现代浏览器优化
+    if (!isServer && !dev) {
+      // 移除不必要的polyfills
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        // 移除Node.js polyfills
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false,
+        stream: false,
+        url: false,
+        zlib: false,
+        http: false,
+        https: false,
+        assert: false,
+        os: false,
+        path: false,
+        buffer: false,
+        util: false,
+        querystring: false,
+        events: false,
+        child_process: false,
+        cluster: false,
+        dgram: false,
+        dns: false,
+        domain: false,
+        module: false,
+        punycode: false,
+        readline: false,
+        repl: false,
+        string_decoder: false,
+        sys: false,
+        timers: false,
+        tty: false,
+        v8: false,
+        vm: false,
+        worker_threads: false
+      }
+
+      // 进一步优化polyfills
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // 使用现代浏览器原生支持的功能，减少polyfills
+        'core-js/stable': false,
+        'regenerator-runtime/runtime': false
+      }
+
+      // 配置更激进的目标环境
+      if (config.module && config.module.rules) {
+        config.module.rules.forEach(rule => {
+          if (rule.use && Array.isArray(rule.use)) {
+            rule.use.forEach(use => {
+              if (use.loader && use.loader.includes('babel-loader')) {
+                use.options = {
+                  ...use.options,
+                  presets: [
+                    [
+                      'next/babel',
+                      {
+                        'preset-env': {
+                          targets: {
+                            chrome: '92',
+                            firefox: '90',
+                            safari: '14.1',
+                            edge: '92'
+                          },
+                          useBuiltIns: 'entry',
+                          corejs: 3,
+                          modules: false,
+                          exclude: [
+                            // 排除不需要的polyfills
+                            'transform-typeof-symbol',
+                            'transform-async-to-generator',
+                            'transform-regenerator'
+                          ]
+                        }
+                      }
+                    ]
+                  ]
+                }
+              }
+            })
+          }
+        })
+      }
+    }
+
     // 性能优化配置
     if (!dev && !isServer) {
-      // 更激进的代码分割优化
+      // 优化代码分割策略
       config.optimization.splitChunks = {
         chunks: 'all',
         minSize: 20000,
-        maxSize: 244000,
+        maxSize: 100000,
+        maxAsyncRequests: 30,
+        maxInitialRequests: 25,
+        enforceSizeThreshold: 50000,
         cacheGroups: {
-          // React 相关库单独分包
+          // React 核心库单独分包
           react: {
             test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
             name: 'react',
             chunks: 'all',
-            priority: 20
+            priority: 30,
+            enforce: true,
+            reuseExistingChunk: true
           },
           // Notion 相关库单独分包
           notion: {
             test: /[\\/]node_modules[\\/](notion-client|notion-utils|react-notion-x)[\\/]/,
             name: 'notion',
             chunks: 'all',
-            priority: 15
+            priority: 25,
+            enforce: true,
+            maxSize: 140000,
+            reuseExistingChunk: true
           },
-          // 其他第三方库
+          // UI 组件库分包
+          ui: {
+            test: /[\\/]node_modules[\\/](@headlessui|react-share|react-hotkeys-hook)[\\/]/,
+            name: 'ui',
+            chunks: 'all',
+            priority: 20,
+            maxSize: 90000,
+            reuseExistingChunk: true
+          },
+          // 工具库分包 - 更精细化分割
+          utils: {
+            test: /[\\/]node_modules[\\/](lodash\.throttle|axios|js-md5|xml2js|memory-cache)[\\/]/,
+            name: 'utils',
+            chunks: 'all',
+            priority: 18,
+            maxSize: 70000,
+            reuseExistingChunk: true
+          },
+          // 评论系统分包
+          comments: {
+            test: /[\\/]node_modules[\\/](@waline|react-facebook|react-tweet-embed)[\\/]/,
+            name: 'comments',
+            chunks: 'all',
+            priority: 15,
+            maxSize: 110000,
+            reuseExistingChunk: true
+          },
+          // 搜索相关库分包
+          search: {
+            test: /[\\/]node_modules[\\/](algoliasearch)[\\/]/,
+            name: 'search',
+            chunks: 'all',
+            priority: 17,
+            maxSize: 80000,
+            reuseExistingChunk: true
+          },
+          // 认证相关库分包
+          auth: {
+            test: /[\\/]node_modules[\\/](@clerk)[\\/]/,
+            name: 'auth',
+            chunks: 'all',
+            priority: 16,
+            maxSize: 100000,
+            reuseExistingChunk: true
+          },
+          // 其他第三方库 - 进一步细分
           vendor: {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
             chunks: 'all',
             priority: 10,
-            maxSize: 200000
+            maxSize: 80000,
+            minChunks: 1,
+            reuseExistingChunk: true
           },
           // 公共代码
           common: {
@@ -294,16 +437,38 @@ const nextConfig = {
             chunks: 'all',
             priority: 5,
             reuseExistingChunk: true,
-            maxSize: 100000
+            maxSize: 70000
+          },
+          // 默认分包
+          default: {
+            minChunks: 2,
+            priority: -20,
+            reuseExistingChunk: true,
+            maxSize: 90000
           }
         }
       }
 
-      // 压缩和 Tree shaking 优化
+      // 增强 Tree shaking 优化
       config.optimization.minimize = true
       config.optimization.usedExports = true
       config.optimization.sideEffects = false
       config.optimization.providedExports = true
+      config.optimization.innerGraph = true
+      config.optimization.mangleExports = 'size'
+      
+      // 更激进的未使用代码移除
+      config.optimization.removeAvailableModules = true
+      config.optimization.removeEmptyChunks = true
+      config.optimization.mergeDuplicateChunks = true
+      
+      // 启用模块连接优化
+      config.optimization.concatenateModules = true
+      config.optimization.flagIncludedChunks = true
+      
+      // 优化模块和chunk ID生成
+      config.optimization.chunkIds = 'deterministic'
+      config.optimization.moduleIds = 'deterministic'
 
       // 移除 console.log 和 debugger (生产环境)
       config.optimization.minimizer.forEach(plugin => {
@@ -333,12 +498,7 @@ const nextConfig = {
         // 移除lodash别名，保持原有的lodash模块结构
       }
 
-      // 添加更多压缩选项
-      config.optimization.concatenateModules = true
-      config.optimization.flagIncludedChunks = true
-      // occurrenceOrder 在 webpack 5 中已被移除，使用 chunkIds 和 moduleIds 替代
-      config.optimization.chunkIds = 'size'
-      config.optimization.moduleIds = 'size'
+      // 添加更多压缩选项 - 这些已在上面设置，避免重复
     }
 
     return config
