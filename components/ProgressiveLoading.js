@@ -1,61 +1,58 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { siteConfig } from '@/lib/config'
-import notionImageConverter from '@/lib/utils/NotionImageConverter'
 
 /**
- * WebP格式自适应图片组件
- * 集成懒加载和渐进式加载功能，支持WebP格式自动切换
+ * 渐进式图片加载组件
+ * 支持多阶段加载：占位符 -> 低质量图片 -> 高质量图片
+ * 具备智能缓存、加载进度显示、平滑过渡动画等功能
  */
-const WebPAdaptiveImage = ({
+const ProgressiveLoading = ({
   src,
   alt = '',
   className = '',
   width,
   height,
   priority = false,
-  placeholder = 'blur',
+  placeholder = 'blur', // 'blur' | 'skeleton' | 'custom' | 'color'
   placeholderSrc,
+  lowQualitySrc,
   threshold = 0.1,
   rootMargin = '50px',
   onLoad,
   onError,
   onProgress,
   style = {},
-  quality = 75,
-  sizes = '100vw',
-  enableRetry = true,
-  retryCount = 3,
-  retryDelay = 1000,
-  cacheStrategy = 'both', // 'memory' | 'localStorage' | 'both'
-  transitionDuration = 700,
-  enableWebP = true, // 是否启用WebP自适应
-  forceWebP = false, // 强制使用WebP（忽略浏览器支持检测）
-  webpQuality = 80, // WebP质量
-  fallbackStrategy = 'original', // 'original' | 'jpeg' | 'png'
+  quality = 75, // 图片质量 1-100
+  sizes = '100vw', // 响应式图片尺寸
+  enableRetry = true, // 启用重试机制
+  retryCount = 3, // 重试次数
+  retryDelay = 1000, // 重试延迟(ms)
+  enablePreload = true, // 启用预加载
+  cacheStrategy = 'memory', // 'memory' | 'localStorage' | 'both'
+  transitionDuration = 700, // 过渡动画时长(ms)
+  blurRadius = 10, // 模糊半径
   ...props
 }) => {
   const imgRef = useRef(null)
   const retryCountRef = useRef(0)
   const loadStartTimeRef = useRef(0)
-  const webpSupportRef = useRef(null) // 缓存WebP支持检测结果
   
   // 状态管理
-  const [loadingState, setLoadingState] = useState('idle')
+  const [loadingState, setLoadingState] = useState('idle') // idle -> placeholder -> lowQuality -> loading -> loaded -> error
   const [currentSrc, setCurrentSrc] = useState('')
   const [isIntersecting, setIsIntersecting] = useState(false)
   const [loadingProgress, setLoadingProgress] = useState(0)
   const [imageMetadata, setImageMetadata] = useState(null)
   const [error, setError] = useState(null)
-  const [selectedFormat, setSelectedFormat] = useState('original') // 'webp' | 'original'
 
   // 缓存管理
   const [imageCache] = useState(() => {
     const cache = new Map()
     
-    // 从 localStorage 恢复缓存
+    // 从 localStorage 恢复缓存（如果启用）
     if (typeof window !== 'undefined' && (cacheStrategy === 'localStorage' || cacheStrategy === 'both')) {
       try {
-        const stored = localStorage.getItem('webp-adaptive-image-cache')
+        const stored = localStorage.getItem('progressive-image-cache')
         if (stored) {
           const parsedCache = JSON.parse(stored)
           Object.entries(parsedCache).forEach(([key, value]) => {
@@ -66,7 +63,7 @@ const WebPAdaptiveImage = ({
           })
         }
       } catch (error) {
-        console.warn('[WebPAdaptiveImage] 缓存恢复失败:', error)
+        console.warn('[ProgressiveLoading] 缓存恢复失败:', error)
       }
     }
     
@@ -77,129 +74,55 @@ const WebPAdaptiveImage = ({
   const config = useMemo(() => ({
     defaultPlaceholder: siteConfig('IMG_LAZY_LOAD_PLACEHOLDER') || '/images/placeholder.svg',
     enableProgressiveLoading: siteConfig('ENABLE_PROGRESSIVE_LOADING', true),
-    maxCacheSize: siteConfig('IMG_CACHE_MAX_SIZE', 100),
+    maxCacheSize: siteConfig('IMG_CACHE_MAX_SIZE', 100), // 最大缓存数量
     compressionQuality: Math.max(10, Math.min(100, quality)),
-    webpQuality: Math.max(10, Math.min(100, webpQuality)),
-  }), [quality, webpQuality])
+  }), [quality])
 
   /**
-   * 检测浏览器WebP支持
+   * 生成不同质量的图片URL
    */
-  const detectWebPSupport = useCallback(() => {
-    if (webpSupportRef.current !== null) {
-      return Promise.resolve(webpSupportRef.current)
-    }
-
-    return new Promise((resolve) => {
-      if (typeof window === 'undefined') {
-        webpSupportRef.current = false
-        resolve(false)
-        return
-      }
-
-      // 方法1: 使用User Agent检测
-      const userAgent = navigator.userAgent
-      const uaSupported = notionImageConverter.isWebPSupported(userAgent)
-      
-      if (forceWebP) {
-        webpSupportRef.current = true
-        resolve(true)
-        return
-      }
-
-      // 方法2: 使用Canvas检测（更准确）
-      const canvas = document.createElement('canvas')
-      canvas.width = 1
-      canvas.height = 1
-      
-      try {
-        const webpDataUrl = canvas.toDataURL('image/webp')
-        const supported = webpDataUrl.indexOf('data:image/webp') === 0
-        
-        webpSupportRef.current = supported && uaSupported
-        resolve(webpSupportRef.current)
-      } catch (error) {
-        // 降级到User Agent检测结果
-        webpSupportRef.current = uaSupported
-        resolve(webpSupportRef.current)
-      }
-    })
-  }, [forceWebP])
-
-  /**
-   * 生成不同格式的图片URL
-   */
-  const generateImageUrls = useCallback(async (originalSrc) => {
-    if (!originalSrc) return { original: '', webp: '', lowQuality: '', thumbnail: '' }
+  const generateImageUrls = useCallback((originalSrc) => {
+    if (!originalSrc) return { original: '', lowQuality: '', thumbnail: '' }
     
     try {
-      // 检测WebP支持
-      const webpSupported = await detectWebPSupport()
-      
       const url = new URL(originalSrc, window.location.origin)
       const params = new URLSearchParams(url.search)
       
-      // 原始高质量版本
-      const originalUrl = new URL(originalSrc, window.location.origin)
-      const originalParams = new URLSearchParams(originalUrl.search)
-      originalParams.set('q', String(config.compressionQuality))
-      if (width) originalParams.set('w', String(width))
-      originalUrl.search = originalParams.toString()
-      
-      // WebP版本
-      let webpUrl = originalUrl.toString()
-      if (enableWebP && webpSupported) {
-        const webpUrlObj = new URL(originalSrc, window.location.origin)
-        const webpParams = new URLSearchParams(webpUrlObj.search)
-        webpParams.set('format', 'webp')
-        webpParams.set('q', String(config.webpQuality))
-        if (width) webpParams.set('w', String(width))
-        webpUrlObj.search = webpParams.toString()
-        webpUrl = webpUrlObj.toString()
-      }
-      
-      // 低质量版本（用于渐进加载）
+      // 低质量版本 (用于渐进加载)
       const lowQualityUrl = new URL(originalSrc, window.location.origin)
       const lowQualityParams = new URLSearchParams(lowQualityUrl.search)
-      lowQualityParams.set('w', '100')
-      lowQualityParams.set('q', '30')
-      if (enableWebP && webpSupported) {
-        lowQualityParams.set('format', 'webp')
-      }
+      lowQualityParams.set('w', '100') // 宽度100px
+      lowQualityParams.set('q', '30') // 质量30%
+      lowQualityParams.set('blur', String(blurRadius))
       lowQualityUrl.search = lowQualityParams.toString()
       
-      // 缩略图版本（用于占位符）
+      // 缩略图版本 (用于占位符)
       const thumbnailUrl = new URL(originalSrc, window.location.origin)
       const thumbnailParams = new URLSearchParams(thumbnailUrl.search)
-      thumbnailParams.set('w', '50')
-      thumbnailParams.set('q', '20')
-      thumbnailParams.set('blur', '10')
-      if (enableWebP && webpSupported) {
-        thumbnailParams.set('format', 'webp')
-      }
+      thumbnailParams.set('w', '50') // 宽度50px
+      thumbnailParams.set('q', '20') // 质量20%
+      thumbnailParams.set('blur', String(blurRadius + 5))
       thumbnailUrl.search = thumbnailParams.toString()
       
-      // 设置选中的格式
-      setSelectedFormat(enableWebP && webpSupported ? 'webp' : 'original')
+      // 高质量版本
+      params.set('q', String(config.compressionQuality))
+      if (width) params.set('w', String(width))
+      url.search = params.toString()
       
       return {
-        original: originalUrl.toString(),
-        webp: webpUrl,
-        lowQuality: lowQualityUrl.toString(),
-        thumbnail: thumbnailUrl.toString(),
-        webpSupported
+        original: url.toString(),
+        lowQuality: lowQualitySrc || lowQualityUrl.toString(),
+        thumbnail: thumbnailUrl.toString()
       }
     } catch (error) {
-      console.warn('[WebPAdaptiveImage] URL处理失败:', error)
+      console.warn('[ProgressiveLoading] URL处理失败:', error)
       return {
         original: originalSrc,
-        webp: originalSrc,
-        lowQuality: originalSrc,
-        thumbnail: originalSrc,
-        webpSupported: false
+        lowQuality: lowQualitySrc || originalSrc,
+        thumbnail: originalSrc
       }
     }
-  }, [enableWebP, width, config.compressionQuality, config.webpQuality, detectWebPSupport])
+  }, [lowQualitySrc, width, config.compressionQuality, blurRadius])
 
   /**
    * 智能图片预加载器
@@ -230,23 +153,27 @@ const WebPAdaptiveImage = ({
         const elapsed = Date.now() - startTime
         const estimatedTotal = options.estimatedLoadTime || 2000
         
+        // 基于时间和文件大小的进度估算
         const timeBasedProgress = Math.min((elapsed / estimatedTotal) * 85, 85)
+        
+        // 添加随机波动使进度更自然
         const randomFactor = (Math.random() - 0.5) * 5
         progress = Math.max(0, Math.min(90, timeBasedProgress + randomFactor))
         
         setLoadingProgress(Math.round(progress))
         
+        // 通知外部进度回调
         if (onProgress) {
           onProgress({
             progress: Math.round(progress),
             stage: options.stage || 'loading',
-            format: selectedFormat,
             elapsed,
             estimated: estimatedTotal
           })
         }
       }
 
+      // 开始进度更新
       if (options.showProgress !== false) {
         progressInterval = setInterval(updateProgress, 100)
       }
@@ -267,30 +194,31 @@ const WebPAdaptiveImage = ({
           loadTime: Date.now() - startTime,
           timestamp: Date.now(),
           fileSize: options.estimatedSize || 0,
-          format: options.format || selectedFormat,
-          webpSupported: options.webpSupported || false
+          format: options.format || 'unknown'
         }
         
         // 缓存管理
         if (imageCache.size >= config.maxCacheSize) {
+          // 清理最旧的缓存项
           const oldestKey = Array.from(imageCache.keys())[0]
           imageCache.delete(oldestKey)
         }
         
         imageCache.set(cacheKey, imageData)
         
-        // 持久化缓存
+        // 持久化缓存到 localStorage
         if (cacheStrategy === 'localStorage' || cacheStrategy === 'both') {
           try {
             const cacheObject = Object.fromEntries(imageCache.entries())
-            localStorage.setItem('webp-adaptive-image-cache', JSON.stringify(cacheObject))
+            localStorage.setItem('progressive-image-cache', JSON.stringify(cacheObject))
           } catch (error) {
-            console.warn('[WebPAdaptiveImage] 缓存持久化失败:', error)
+            console.warn('[ProgressiveLoading] 缓存持久化失败:', error)
           }
         }
         
         setImageMetadata(imageData)
         
+        // 平滑过渡延迟
         const transitionDelay = options.transitionDelay || 200
         setTimeout(() => {
           resolve(imageData)
@@ -307,20 +235,20 @@ const WebPAdaptiveImage = ({
         const errorInfo = {
           message: `Failed to load image: ${imageSrc}`,
           src: imageSrc,
-          format: selectedFormat,
           timestamp: Date.now(),
           retryCount: retryCountRef.current,
           originalError: errorEvent
         }
         
-        console.warn('[WebPAdaptiveImage] 图片加载失败:', errorInfo)
+        console.warn('[ProgressiveLoading] 图片加载失败:', errorInfo)
         reject(errorInfo)
       }
 
+      // 开始加载
       img.src = imageSrc
       
       // 超时处理
-      const timeout = options.timeout || 15000
+      const timeout = options.timeout || 15000 // 15秒超时
       setTimeout(() => {
         if (!img.complete) {
           if (progressInterval) {
@@ -329,16 +257,15 @@ const WebPAdaptiveImage = ({
           reject({
             message: `Image load timeout: ${imageSrc}`,
             src: imageSrc,
-            format: selectedFormat,
             timeout: true
           })
         }
       }, timeout)
     })
-  }, [imageCache, config.maxCacheSize, cacheStrategy, onProgress, selectedFormat, sizes])
+  }, [imageCache, config.maxCacheSize, cacheStrategy, onProgress])
 
   /**
-   * 重试机制（支持格式降级）
+   * 重试机制
    */
   const retryLoad = useCallback(async (loadFunction, maxRetries = retryCount) => {
     let lastError = null
@@ -351,33 +278,17 @@ const WebPAdaptiveImage = ({
       } catch (error) {
         lastError = error
         
-        // 如果是WebP加载失败，尝试降级到原格式
-        if (i === 0 && selectedFormat === 'webp' && enableWebP) {
-          console.log('[WebPAdaptiveImage] WebP加载失败，降级到原格式')
-          setSelectedFormat('original')
-          
-          // 重新生成URL并重试
-          const imageUrls = await generateImageUrls(src)
-          if (imageUrls.original !== imageUrls.webp) {
-            try {
-              const fallbackResult = await loadFunction(imageUrls.original)
-              return fallbackResult
-            } catch (fallbackError) {
-              console.warn('[WebPAdaptiveImage] 原格式也加载失败:', fallbackError)
-            }
-          }
-        }
-        
         if (i < maxRetries) {
+          // 指数退避延迟
           const delay = retryDelay * Math.pow(2, i)
-          console.log(`[WebPAdaptiveImage] 重试 ${i + 1}/${maxRetries}, ${delay}ms后重试`)
+          console.log(`[ProgressiveLoading] 重试 ${i + 1}/${maxRetries}, ${delay}ms后重试`)
           await new Promise(resolve => setTimeout(resolve, delay))
         }
       }
     }
     
     throw lastError
-  }, [retryCount, retryDelay, selectedFormat, enableWebP, generateImageUrls, src])
+  }, [retryCount, retryDelay])
 
   /**
    * 渐进式加载主逻辑
@@ -387,7 +298,7 @@ const WebPAdaptiveImage = ({
 
     try {
       setError(null)
-      const imageUrls = await generateImageUrls(src)
+      const imageUrls = generateImageUrls(src)
       
       // 阶段1: 显示占位符
       setLoadingState('placeholder')
@@ -398,48 +309,43 @@ const WebPAdaptiveImage = ({
       }
 
       if (config.enableProgressiveLoading) {
-        // 阶段2: 加载缩略图
+        // 阶段2: 加载缩略图/低质量图片
         try {
           setLoadingState('lowQuality')
-          const thumbnailData = await preloadImage(imageUrls.thumbnail, `thumb_${src}_${selectedFormat}`, {
+          const thumbnailData = await preloadImage(imageUrls.thumbnail, `thumb_${src}`, {
             estimatedLoadTime: 500,
             transitionDelay: 100,
             stage: 'thumbnail',
-            format: selectedFormat,
-            webpSupported: imageUrls.webpSupported,
             showProgress: false
           })
           setCurrentSrc(thumbnailData.src)
           
+          // 短暂延迟以显示缩略图
           await new Promise(resolve => setTimeout(resolve, 200))
           
           // 加载低质量版本
-          const lowQualityData = await preloadImage(imageUrls.lowQuality, `low_${src}_${selectedFormat}`, {
+          const lowQualityData = await preloadImage(imageUrls.lowQuality, `low_${src}`, {
             estimatedLoadTime: 1000,
             transitionDelay: 150,
-            stage: 'lowQuality',
-            format: selectedFormat,
-            webpSupported: imageUrls.webpSupported
+            stage: 'lowQuality'
           })
           setCurrentSrc(lowQualityData.src)
           
+          // 延迟后加载高质量图片
           await new Promise(resolve => setTimeout(resolve, 300))
         } catch (error) {
-          console.warn('[WebPAdaptiveImage] 低质量图片加载失败，直接加载原图:', error)
+          console.warn('[ProgressiveLoading] 低质量图片加载失败，直接加载原图:', error)
         }
       }
 
       // 阶段3: 加载高质量图片
       setLoadingState('loading')
       
-      const loadHighQuality = async (targetUrl = null) => {
-        const finalUrl = targetUrl || (selectedFormat === 'webp' ? imageUrls.webp : imageUrls.original)
-        return await preloadImage(finalUrl, `${src}_${selectedFormat}`, {
+      const loadHighQuality = async () => {
+        return await preloadImage(imageUrls.original, src, {
           estimatedLoadTime: 3000,
           transitionDelay: 300,
           stage: 'highQuality',
-          format: selectedFormat,
-          webpSupported: imageUrls.webpSupported,
           crossOrigin: 'anonymous'
         })
       }
@@ -458,14 +364,12 @@ const WebPAdaptiveImage = ({
           loadingState: 'loaded',
           imageData: highQualityData,
           totalLoadTime: Date.now() - loadStartTimeRef.current,
-          retryCount: retryCountRef.current,
-          selectedFormat,
-          webpSupported: imageUrls.webpSupported
+          retryCount: retryCountRef.current
         })
       }
 
     } catch (error) {
-      console.error('[WebPAdaptiveImage] 渐进式加载失败:', error)
+      console.error('[ProgressiveLoading] 渐进式加载失败:', error)
       setLoadingState('error')
       setError(error)
       setCurrentSrc(config.defaultPlaceholder)
@@ -485,8 +389,7 @@ const WebPAdaptiveImage = ({
     enableRetry, 
     retryLoad, 
     onLoad, 
-    onError,
-    selectedFormat
+    onError
   ])
 
   /**
@@ -595,12 +498,7 @@ const WebPAdaptiveImage = ({
                 <div className="absolute inset-0 w-5 h-5 border-2 border-blue-200 rounded-full"></div>
               </div>
               <div className="flex flex-col">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm font-medium text-gray-700">{Math.round(loadingProgress)}%</span>
-                  {selectedFormat === 'webp' && (
-                    <span className="text-xs bg-green-100 text-green-600 px-1 rounded">WebP</span>
-                  )}
-                </div>
+                <span className="text-sm font-medium text-gray-700">{Math.round(loadingProgress)}%</span>
                 <div className="w-16 h-1 bg-gray-200 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-blue-500 transition-all duration-300 ease-out"
@@ -700,9 +598,6 @@ const WebPAdaptiveImage = ({
             {error?.timeout && (
               <p className="text-xs text-gray-400">加载超时</p>
             )}
-            {selectedFormat === 'webp' && (
-              <p className="text-xs text-gray-400">WebP格式加载失败</p>
-            )}
           </div>
         </div>
       )}
@@ -711,26 +606,17 @@ const WebPAdaptiveImage = ({
       {process.env.NODE_ENV === 'development' && (
         <div className="absolute top-2 left-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
           <div>状态: {loadingState}</div>
-          <div>格式: {selectedFormat}</div>
           {imageMetadata && (
             <>
               <div>尺寸: {imageMetadata.width}×{imageMetadata.height}</div>
               <div>加载时间: {imageMetadata.loadTime}ms</div>
-              <div>WebP支持: {imageMetadata.webpSupported ? '是' : '否'}</div>
               {retryCountRef.current > 0 && <div>重试: {retryCountRef.current}次</div>}
             </>
           )}
-        </div>
-      )}
-
-      {/* 格式指示器 */}
-      {selectedFormat === 'webp' && loadingState === 'loaded' && (
-        <div className="absolute bottom-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-          WebP
         </div>
       )}
     </div>
   )
 }
 
-export default WebPAdaptiveImage
+export default ProgressiveLoading

@@ -93,7 +93,7 @@ const nextConfig = {
 
   // 性能优化配置
   swcMinify: true, // 使用 SWC 进行代码压缩
-  compress: true, // 启用 gzip 压缩
+  compress: false, // 禁用默认gzip，使用自定义压缩中间件
   poweredByHeader: false, // 移除 X-Powered-By 头
 
   // 多语言， 在export时禁用
@@ -191,6 +191,101 @@ const nextConfig = {
     ? undefined
     : () => {
       return [
+        // 静态资源缓存策略
+        {
+          source: '/images/:path*',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=31536000, immutable'
+            },
+            {
+              key: 'X-Content-Type-Options',
+              value: 'nosniff'
+            }
+          ]
+        },
+        {
+          source: '/fonts/:path*',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=31536000, immutable'
+            },
+            {
+              key: 'X-Content-Type-Options',
+              value: 'nosniff'
+            }
+          ]
+        },
+        {
+          source: '/css/:path*',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=31536000, immutable'
+            },
+            {
+              key: 'X-Content-Type-Options',
+              value: 'nosniff'
+            }
+          ]
+        },
+        {
+          source: '/js/:path*',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=31536000, immutable'
+            },
+            {
+              key: 'X-Content-Type-Options',
+              value: 'nosniff'
+            }
+          ]
+        },
+        // API路由缓存策略
+        {
+          source: '/api/:path*',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=300, s-maxage=600'
+            },
+            {
+              key: 'X-Content-Type-Options',
+              value: 'nosniff'
+            }
+          ]
+        },
+        // RSS和XML文件缓存
+        {
+          source: '/rss/:path*',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=3600'
+            },
+            {
+              key: 'X-Content-Type-Options',
+              value: 'nosniff'
+            }
+          ]
+        },
+        {
+          source: '/(sitemap|robots).xml',
+          headers: [
+            {
+              key: 'Cache-Control',
+              value: 'public, max-age=3600'
+            },
+            {
+              key: 'X-Content-Type-Options',
+              value: 'nosniff'
+            }
+          ]
+        },
+        // 通用安全头和缓存策略
         {
           source: '/:path*{/}?',
           headers: [
@@ -220,10 +315,6 @@ const nextConfig = {
             {
               key: 'Referrer-Policy',
               value: 'strict-origin-when-cross-origin'
-            },
-            {
-              key: 'Cache-Control',
-              value: 'public, max-age=31536000, immutable'
             },
             {
               key: 'Content-Security-Policy',
