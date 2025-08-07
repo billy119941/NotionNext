@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { siteConfig } from '@/lib/config'
-import notionImageConverter from '@/lib/utils/NotionImageConverter'
 
 /**
  * 渐进式懒加载图片组件
@@ -54,9 +53,12 @@ const LazyImageComponent = ({
         return
       }
 
-      // 使用NotionImageConverter的检测逻辑
-      const userAgent = navigator.userAgent
-      const supported = notionImageConverter.isWebPSupported(userAgent)
+      // 简单的WebP支持检测
+      const canvas = document.createElement('canvas')
+      canvas.width = 1
+      canvas.height = 1
+      const dataURL = canvas.toDataURL('image/webp')
+      const supported = dataURL.indexOf('data:image/webp') === 0
       
       webpSupportRef.current = supported
       resolve(supported)

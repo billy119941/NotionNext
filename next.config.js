@@ -84,6 +84,8 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true
   },
+  // 只处理页面文件，忽略测试文件
+  pageExtensions: ['js', 'jsx', 'ts', 'tsx'],
   output: process.env.EXPORT
     ? 'export'
     : process.env.NEXT_BUILD_STANDALONE === 'true'

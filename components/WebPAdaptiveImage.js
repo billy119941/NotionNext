@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { siteConfig } from '@/lib/config'
-import notionImageConverter from '@/lib/utils/NotionImageConverter'
 
 /**
  * WebP格式自适应图片组件
@@ -97,17 +96,13 @@ const WebPAdaptiveImage = ({
         return
       }
 
-      // 方法1: 使用User Agent检测
-      const userAgent = navigator.userAgent
-      const uaSupported = notionImageConverter.isWebPSupported(userAgent)
-      
       if (forceWebP) {
         webpSupportRef.current = true
         resolve(true)
         return
       }
 
-      // 方法2: 使用Canvas检测（更准确）
+      // 使用Canvas检测WebP支持
       const canvas = document.createElement('canvas')
       canvas.width = 1
       canvas.height = 1
@@ -116,12 +111,12 @@ const WebPAdaptiveImage = ({
         const webpDataUrl = canvas.toDataURL('image/webp')
         const supported = webpDataUrl.indexOf('data:image/webp') === 0
         
-        webpSupportRef.current = supported && uaSupported
+        webpSupportRef.current = supported
         resolve(webpSupportRef.current)
       } catch (error) {
-        // 降级到User Agent检测结果
-        webpSupportRef.current = uaSupported
-        resolve(webpSupportRef.current)
+        // 降级处理
+        webpSupportRef.current = false
+        resolve(false)
       }
     })
   }, [forceWebP])
