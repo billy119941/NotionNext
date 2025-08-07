@@ -138,31 +138,7 @@ const LazyImageComponent = ({
     }
   }, [enableWebP, width, webpQuality, detectWebPSupport])
 
-  /**
-   * 生成低质量占位符URL（保持向后兼容）
-   */
-  const generateLowQualityUrl = useCallback((originalSrc) => {
-    if (!originalSrc) return null
-    
-    // 如果已经提供了低质量图片，直接使用
-    if (lowQualitySrc) return lowQualitySrc
-    
-    try {
-      const url = new URL(originalSrc, window.location.origin)
-      const params = new URLSearchParams(url.search)
-      
-      // 设置低质量参数
-      params.set('w', '50') // 宽度50px
-      params.set('q', '20') // 质量20%
-      params.set('blur', '2') // 模糊效果
-      
-      url.search = params.toString()
-      return url.toString()
-    } catch (error) {
-      // 如果URL处理失败，返回原图
-      return originalSrc
-    }
-  }, [lowQualitySrc])
+  // 注意：generateLowQualityUrl函数已被generateImageUrls替代，这里移除以避免未使用的代码
 
   /**
    * 预加载图片并缓存 - 增强版本

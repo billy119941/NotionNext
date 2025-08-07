@@ -111,9 +111,14 @@ export async function getStaticProps({ params: { prefix, slug }, locale }) {
 
   // 处理非列表内文章的信息
   if (!post) {
-    const pageId = slug.slice(-1)[0]
-    if (pageId && pageId.length >= 32) {
-      post = await getPost(pageId)
+    try {
+      const pageId = slug
+      if (pageId && pageId.length >= 32) {
+        post = await getPost(pageId)
+      }
+    } catch (error) {
+      console.warn('获取文章失败:', error)
+      post = null
     }
   }
 

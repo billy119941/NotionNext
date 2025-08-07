@@ -70,10 +70,16 @@ export async function getStaticProps({
 
   // 处理非列表内文章的内信息
   if (!props?.post) {
-    const pageId = fullSlug.slice(-1)[0]
-    if (pageId.length >= 32) {
-      const post = await getPost(pageId)
-      props.post = post
+    try {
+      // 从完整slug中提取最后一部分作为可能的pageId
+      const pageId = fullSlug.split('/').pop()
+      if (pageId && pageId.length >= 32) {
+        const post = await getPost(pageId)
+        props.post = post
+      }
+    } catch (error) {
+      console.warn('获取文章失败:', error)
+      props.post = null
     }
   }
 
